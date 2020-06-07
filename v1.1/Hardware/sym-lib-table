@@ -1,0 +1,7 @@
+(sym_lib_table
+  (lib (name "oe_devboards")(type "Legacy")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Symbols/oe_devboards.lib")(options "")(descr ""))
+  (lib (name "oe_isolation")(type "Legacy")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Symbols/oe_isolation.lib")(options "")(descr ""))
+  (lib (name "oe_gate-driver")(type "Legacy")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Symbols/oe_gate-driver.lib")(options "")(descr ""))
+  (lib (name "oe_opamp")(type "Legacy")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Symbols/oe_opamp.lib")(options "")(descr ""))
+  (lib (name "oe_misc")(type "Legacy")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Symbols/oe_misc.lib")(options "")(descr ""))
+)

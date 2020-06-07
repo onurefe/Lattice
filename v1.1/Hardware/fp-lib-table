@@ -1,0 +1,9 @@
+(fp_lib_table
+  (lib (name "oe_transformer")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_transformer.pretty")(options "")(descr ""))
+  (lib (name "oe_inductor")(type "KiCad")(uri "${KIPRJMOD}/oe_inductor.pretty")(options "")(descr ""))
+  (lib (name "oe_modules")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_modules.pretty")(options "")(descr ""))
+  (lib (name "oe_connector")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_connector.pretty")(options "")(descr ""))
+  (lib (name "oe_capacitor")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_capacitor.pretty")(options "")(descr ""))
+  (lib (name "oe_logos")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_logos.pretty")(options "")(descr ""))
+  (lib (name "oe_crystal")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_crystal.pretty")(options "")(descr ""))
+)
