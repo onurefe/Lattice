@@ -1,0 +1,1569 @@
+ARM GAS  /tmp/cclH5Ofm.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"synchronous_rectifier.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.Sr_Start,"ax",%progbits
+  16              		.align	1
+  17              		.global	Sr_Start
+  18              		.arch armv7-m
+  19              		.syntax unified
+  20              		.thumb
+  21              		.thumb_func
+  22              		.fpu softvfp
+  24              	Sr_Start:
+  25              	.LFB66:
+  26              		.file 1 "Src/synchronous_rectifier.c"
+   1:Src/synchronous_rectifier.c **** #include "synchronous_rectifier.h"
+   2:Src/synchronous_rectifier.c **** #include "math.h"
+   3:Src/synchronous_rectifier.c **** 
+   4:Src/synchronous_rectifier.c **** /* Private definitions -----------------------------------------------------*/
+   5:Src/synchronous_rectifier.c **** #define ZERO_CROSSING_PERIOD_EMA_FILTER_COEFF 0.01f
+   6:Src/synchronous_rectifier.c **** #define CHOCK_IND 17.8e-3
+   7:Src/synchronous_rectifier.c **** #define FILTER_CAP 1.5e-3
+   8:Src/synchronous_rectifier.c **** #define MAX_SURGE_CURRENT 2.0f
+   9:Src/synchronous_rectifier.c **** #define PEAK_VOLTAGE 311.1269f
+  10:Src/synchronous_rectifier.c **** #define MAINS_FREQ 50.0f
+  11:Src/synchronous_rectifier.c **** #define MAINS_AMPLITUDE 311.1269837220809f
+  12:Src/synchronous_rectifier.c **** #define ALPHA_OF_BRIDGE_TRANSITION 0.6f
+  13:Src/synchronous_rectifier.c **** 
+  14:Src/synchronous_rectifier.c **** /* Imported variables ------------------------------------------------------*/
+  15:Src/synchronous_rectifier.c **** extern TIM_HandleTypeDef htim2;
+  16:Src/synchronous_rectifier.c **** extern TIM_HandleTypeDef htim3;
+  17:Src/synchronous_rectifier.c **** extern TIM_HandleTypeDef htim4;
+  18:Src/synchronous_rectifier.c **** 
+  19:Src/synchronous_rectifier.c **** /* Private variables --------------------------------------------------------*/
+  20:Src/synchronous_rectifier.c **** // Runtime variables.
+  21:Src/synchronous_rectifier.c **** static volatile float Alpha;
+  22:Src/synchronous_rectifier.c **** static volatile uint16_t LastCapture;
+  23:Src/synchronous_rectifier.c **** static float AlphaSlewRate;
+  24:Src/synchronous_rectifier.c **** static float AlphaDestination;
+  25:Src/synchronous_rectifier.c **** static volatile float MeanZeroCrossingPeriodInUs;
+  26:Src/synchronous_rectifier.c **** static Bool_t PhaseLocked;
+  27:Src/synchronous_rectifier.c **** static Bool_t ToSetDrive0;
+  28:Src/synchronous_rectifier.c **** static Bool_t ToSetDrive1;
+  29:Src/synchronous_rectifier.c **** 
+  30:Src/synchronous_rectifier.c **** /* Exported functions ------------------------------------------------------*/
+  31:Src/synchronous_rectifier.c **** void Sr_Start(void)
+  32:Src/synchronous_rectifier.c **** {
+ARM GAS  /tmp/cclH5Ofm.s 			page 2
+
+
+  27              		.loc 1 32 1 view -0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31 0000 38B5     		push	{r3, r4, r5, lr}
+  32              	.LCFI0:
+  33              		.cfi_def_cfa_offset 16
+  34              		.cfi_offset 3, -16
+  35              		.cfi_offset 4, -12
+  36              		.cfi_offset 5, -8
+  37              		.cfi_offset 14, -4
+  33:Src/synchronous_rectifier.c ****     // Initialize runtime variables.
+  34:Src/synchronous_rectifier.c ****     Alpha = 0.0f;
+  38              		.loc 1 34 5 view .LVU1
+  39              		.loc 1 34 11 is_stmt 0 view .LVU2
+  40 0002 0023     		movs	r3, #0
+  41 0004 174A     		ldr	r2, .L3
+  42 0006 1360     		str	r3, [r2]	@ float
+  35:Src/synchronous_rectifier.c ****     AlphaDestination = 0.0f;
+  43              		.loc 1 35 5 is_stmt 1 view .LVU3
+  44              		.loc 1 35 22 is_stmt 0 view .LVU4
+  45 0008 174A     		ldr	r2, .L3+4
+  46 000a 1360     		str	r3, [r2]	@ float
+  36:Src/synchronous_rectifier.c ****     AlphaSlewRate = 0.0f;
+  47              		.loc 1 36 5 is_stmt 1 view .LVU5
+  48              		.loc 1 36 19 is_stmt 0 view .LVU6
+  49 000c 174A     		ldr	r2, .L3+8
+  50 000e 1360     		str	r3, [r2]	@ float
+  37:Src/synchronous_rectifier.c ****     MeanZeroCrossingPeriodInUs = (1e6 / (2.0f * MAINS_FREQ));
+  51              		.loc 1 37 5 is_stmt 1 view .LVU7
+  52              		.loc 1 37 32 is_stmt 0 view .LVU8
+  53 0010 174B     		ldr	r3, .L3+12
+  54 0012 184A     		ldr	r2, .L3+16
+  55 0014 1A60     		str	r2, [r3]	@ float
+  38:Src/synchronous_rectifier.c ****     LastCapture = 0;
+  56              		.loc 1 38 5 is_stmt 1 view .LVU9
+  57              		.loc 1 38 17 is_stmt 0 view .LVU10
+  58 0016 0024     		movs	r4, #0
+  59 0018 174B     		ldr	r3, .L3+20
+  60 001a 1C80     		strh	r4, [r3]	@ movhi
+  39:Src/synchronous_rectifier.c ****     ToSetDrive0 = FALSE;
+  61              		.loc 1 39 5 is_stmt 1 view .LVU11
+  62              		.loc 1 39 17 is_stmt 0 view .LVU12
+  63 001c 174B     		ldr	r3, .L3+24
+  64 001e 1C70     		strb	r4, [r3]
+  40:Src/synchronous_rectifier.c ****     ToSetDrive1 = FALSE;
+  65              		.loc 1 40 5 is_stmt 1 view .LVU13
+  66              		.loc 1 40 17 is_stmt 0 view .LVU14
+  67 0020 174B     		ldr	r3, .L3+28
+  68 0022 1C70     		strb	r4, [r3]
+  41:Src/synchronous_rectifier.c ****     PhaseLocked = FALSE;
+  69              		.loc 1 41 5 is_stmt 1 view .LVU15
+  70              		.loc 1 41 17 is_stmt 0 view .LVU16
+  71 0024 174B     		ldr	r3, .L3+32
+  72 0026 1C70     		strb	r4, [r3]
+  42:Src/synchronous_rectifier.c **** 
+  43:Src/synchronous_rectifier.c ****     HAL_GPIO_WritePin(LED_GREEN_GPIO_Port, LED_GREEN_Pin, GPIO_PIN_RESET);
+ARM GAS  /tmp/cclH5Ofm.s 			page 3
+
+
+  73              		.loc 1 43 5 is_stmt 1 view .LVU17
+  74 0028 2246     		mov	r2, r4
+  75 002a 4FF40051 		mov	r1, #8192
+  76 002e 1648     		ldr	r0, .L3+36
+  77 0030 FFF7FEFF 		bl	HAL_GPIO_WritePin
+  78              	.LVL0:
+  44:Src/synchronous_rectifier.c ****     HAL_GPIO_WritePin(THYRISTOR0_DRIVE_GPIO_Port, THYRISTOR0_DRIVE_Pin, GPIO_PIN_RESET);
+  79              		.loc 1 44 5 view .LVU18
+  80 0034 154D     		ldr	r5, .L3+40
+  81 0036 2246     		mov	r2, r4
+  82 0038 4FF40071 		mov	r1, #512
+  83 003c 2846     		mov	r0, r5
+  84 003e FFF7FEFF 		bl	HAL_GPIO_WritePin
+  85              	.LVL1:
+  45:Src/synchronous_rectifier.c ****     HAL_GPIO_WritePin(THYRISTOR1_DRIVE_GPIO_Port, THYRISTOR1_DRIVE_Pin, GPIO_PIN_RESET);
+  86              		.loc 1 45 5 view .LVU19
+  87 0042 2246     		mov	r2, r4
+  88 0044 4FF48071 		mov	r1, #256
+  89 0048 2846     		mov	r0, r5
+  90 004a FFF7FEFF 		bl	HAL_GPIO_WritePin
+  91              	.LVL2:
+  46:Src/synchronous_rectifier.c **** 
+  47:Src/synchronous_rectifier.c ****     // Start input capture interrupts.
+  48:Src/synchronous_rectifier.c ****     HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_3);
+  92              		.loc 1 48 5 view .LVU20
+  93 004e 104C     		ldr	r4, .L3+44
+  94 0050 0821     		movs	r1, #8
+  95 0052 2046     		mov	r0, r4
+  96 0054 FFF7FEFF 		bl	HAL_TIM_IC_Start_IT
+  97              	.LVL3:
+  49:Src/synchronous_rectifier.c ****     HAL_TIM_IC_Start_IT(&htim3, TIM_CHANNEL_4);
+  98              		.loc 1 49 5 view .LVU21
+  99 0058 0C21     		movs	r1, #12
+ 100 005a 2046     		mov	r0, r4
+ 101 005c FFF7FEFF 		bl	HAL_TIM_IC_Start_IT
+ 102              	.LVL4:
+  50:Src/synchronous_rectifier.c **** }
+ 103              		.loc 1 50 1 is_stmt 0 view .LVU22
+ 104 0060 38BD     		pop	{r3, r4, r5, pc}
+ 105              	.L4:
+ 106 0062 00BF     		.align	2
+ 107              	.L3:
+ 108 0064 00000000 		.word	.LANCHOR0
+ 109 0068 00000000 		.word	.LANCHOR1
+ 110 006c 00000000 		.word	.LANCHOR2
+ 111 0070 00000000 		.word	.LANCHOR3
+ 112 0074 00401C46 		.word	1176256512
+ 113 0078 00000000 		.word	.LANCHOR4
+ 114 007c 00000000 		.word	.LANCHOR5
+ 115 0080 00000000 		.word	.LANCHOR6
+ 116 0084 00000000 		.word	.LANCHOR7
+ 117 0088 00100140 		.word	1073811456
+ 118 008c 000C0140 		.word	1073810432
+ 119 0090 00000000 		.word	htim3
+ 120              		.cfi_endproc
+ 121              	.LFE66:
+ 123              		.section	.text.Sr_Stop,"ax",%progbits
+ARM GAS  /tmp/cclH5Ofm.s 			page 4
+
+
+ 124              		.align	1
+ 125              		.global	Sr_Stop
+ 126              		.syntax unified
+ 127              		.thumb
+ 128              		.thumb_func
+ 129              		.fpu softvfp
+ 131              	Sr_Stop:
+ 132              	.LFB67:
+  51:Src/synchronous_rectifier.c **** 
+  52:Src/synchronous_rectifier.c **** void Sr_Stop(void)
+  53:Src/synchronous_rectifier.c **** {
+ 133              		.loc 1 53 1 is_stmt 1 view -0
+ 134              		.cfi_startproc
+ 135              		@ args = 0, pretend = 0, frame = 0
+ 136              		@ frame_needed = 0, uses_anonymous_args = 0
+ 137 0000 10B5     		push	{r4, lr}
+ 138              	.LCFI1:
+ 139              		.cfi_def_cfa_offset 8
+ 140              		.cfi_offset 4, -8
+ 141              		.cfi_offset 14, -4
+  54:Src/synchronous_rectifier.c ****     // Stop input capture interrupts.
+  55:Src/synchronous_rectifier.c ****     HAL_TIM_IC_Stop_IT(&htim3, TIM_CHANNEL_3);
+ 142              		.loc 1 55 5 view .LVU24
+ 143 0002 054C     		ldr	r4, .L7
+ 144 0004 0821     		movs	r1, #8
+ 145 0006 2046     		mov	r0, r4
+ 146 0008 FFF7FEFF 		bl	HAL_TIM_IC_Stop_IT
+ 147              	.LVL5:
+  56:Src/synchronous_rectifier.c ****     HAL_TIM_IC_Stop_IT(&htim3, TIM_CHANNEL_4);
+ 148              		.loc 1 56 5 view .LVU25
+ 149 000c 0C21     		movs	r1, #12
+ 150 000e 2046     		mov	r0, r4
+ 151 0010 FFF7FEFF 		bl	HAL_TIM_IC_Stop_IT
+ 152              	.LVL6:
+  57:Src/synchronous_rectifier.c **** }
+ 153              		.loc 1 57 1 is_stmt 0 view .LVU26
+ 154 0014 10BD     		pop	{r4, pc}
+ 155              	.L8:
+ 156 0016 00BF     		.align	2
+ 157              	.L7:
+ 158 0018 00000000 		.word	htim3
+ 159              		.cfi_endproc
+ 160              	.LFE67:
+ 162              		.global	__aeabi_fcmpge
+ 163              		.global	__aeabi_f2d
+ 164              		.global	__aeabi_dmul
+ 165              		.global	__aeabi_d2f
+ 166              		.global	__aeabi_fcmple
+ 167              		.global	__aeabi_fmul
+ 168              		.global	__aeabi_fsub
+ 169              		.global	__aeabi_ddiv
+ 170              		.global	__aeabi_fcmpgt
+ 171              		.section	.text.Sr_SetVoltage,"ax",%progbits
+ 172              		.align	1
+ 173              		.global	Sr_SetVoltage
+ 174              		.syntax unified
+ 175              		.thumb
+ARM GAS  /tmp/cclH5Ofm.s 			page 5
+
+
+ 176              		.thumb_func
+ 177              		.fpu softvfp
+ 179              	Sr_SetVoltage:
+ 180              	.LVL7:
+ 181              	.LFB68:
+  58:Src/synchronous_rectifier.c **** 
+  59:Src/synchronous_rectifier.c **** void Sr_SetVoltage(float normalizedVoltage)
+  60:Src/synchronous_rectifier.c **** {
+ 182              		.loc 1 60 1 is_stmt 1 view -0
+ 183              		.cfi_startproc
+ 184              		@ args = 0, pretend = 0, frame = 0
+ 185              		@ frame_needed = 0, uses_anonymous_args = 0
+ 186              		.loc 1 60 1 is_stmt 0 view .LVU28
+ 187 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 188              	.LCFI2:
+ 189              		.cfi_def_cfa_offset 24
+ 190              		.cfi_offset 3, -24
+ 191              		.cfi_offset 4, -20
+ 192              		.cfi_offset 5, -16
+ 193              		.cfi_offset 6, -12
+ 194              		.cfi_offset 7, -8
+ 195              		.cfi_offset 14, -4
+ 196 0002 0446     		mov	r4, r0
+  61:Src/synchronous_rectifier.c ****     float norm_destination_voltage;
+ 197              		.loc 1 61 5 is_stmt 1 view .LVU29
+  62:Src/synchronous_rectifier.c ****     if (AlphaDestination >= 0.499f)
+ 198              		.loc 1 62 5 view .LVU30
+ 199              		.loc 1 62 26 is_stmt 0 view .LVU31
+ 200 0004 4A4B     		ldr	r3, .L23+32
+ 201 0006 1D68     		ldr	r5, [r3]	@ float
+ 202              		.loc 1 62 8 view .LVU32
+ 203 0008 4A49     		ldr	r1, .L23+36
+ 204 000a 2846     		mov	r0, r5
+ 205              	.LVL8:
+ 206              		.loc 1 62 8 view .LVU33
+ 207 000c FFF7FEFF 		bl	__aeabi_fcmpge
+ 208              	.LVL9:
+ 209 0010 68B9     		cbnz	r0, .L17
+  63:Src/synchronous_rectifier.c ****     {
+  64:Src/synchronous_rectifier.c ****         norm_destination_voltage = 1.0f;
+  65:Src/synchronous_rectifier.c ****     }
+  66:Src/synchronous_rectifier.c ****     else
+  67:Src/synchronous_rectifier.c ****     {
+  68:Src/synchronous_rectifier.c ****         norm_destination_voltage = sinf(M_PI * AlphaDestination);
+ 210              		.loc 1 68 9 is_stmt 1 view .LVU34
+ 211              		.loc 1 68 46 is_stmt 0 view .LVU35
+ 212 0012 2846     		mov	r0, r5
+ 213 0014 FFF7FEFF 		bl	__aeabi_f2d
+ 214              	.LVL10:
+ 215 0018 3DA3     		adr	r3, .L23
+ 216 001a D3E90023 		ldrd	r2, [r3]
+ 217 001e FFF7FEFF 		bl	__aeabi_dmul
+ 218              	.LVL11:
+ 219              		.loc 1 68 36 view .LVU36
+ 220 0022 FFF7FEFF 		bl	__aeabi_d2f
+ 221              	.LVL12:
+ 222 0026 FFF7FEFF 		bl	sinf
+ARM GAS  /tmp/cclH5Ofm.s 			page 6
+
+
+ 223              	.LVL13:
+ 224 002a 0546     		mov	r5, r0
+ 225              	.LVL14:
+ 226              		.loc 1 68 36 view .LVU37
+ 227 002c 01E0     		b	.L10
+ 228              	.LVL15:
+ 229              	.L17:
+  64:Src/synchronous_rectifier.c ****     }
+ 230              		.loc 1 64 34 view .LVU38
+ 231 002e 4FF07E55 		mov	r5, #1065353216
+ 232              	.L10:
+ 233              	.LVL16:
+  69:Src/synchronous_rectifier.c ****     }
+  70:Src/synchronous_rectifier.c **** 
+  71:Src/synchronous_rectifier.c ****     if (normalizedVoltage >= norm_destination_voltage)
+ 234              		.loc 1 71 5 is_stmt 1 view .LVU39
+ 235              		.loc 1 71 8 is_stmt 0 view .LVU40
+ 236 0032 2146     		mov	r1, r4
+ 237 0034 2846     		mov	r0, r5
+ 238 0036 FFF7FEFF 		bl	__aeabi_fcmple
+ 239              	.LVL17:
+ 240 003a 0028     		cmp	r0, #0
+ 241 003c 4DD0     		beq	.L21
+ 242              	.LBB2:
+  72:Src/synchronous_rectifier.c ****     {
+  73:Src/synchronous_rectifier.c ****         float settling_period;
+ 243              		.loc 1 73 9 is_stmt 1 view .LVU41
+  74:Src/synchronous_rectifier.c ****         float current_volt2 = norm_destination_voltage * norm_destination_voltage;
+ 244              		.loc 1 74 9 view .LVU42
+ 245              		.loc 1 74 15 is_stmt 0 view .LVU43
+ 246 003e 2946     		mov	r1, r5
+ 247 0040 2846     		mov	r0, r5
+ 248 0042 FFF7FEFF 		bl	__aeabi_fmul
+ 249              	.LVL18:
+ 250 0046 0546     		mov	r5, r0
+ 251              	.LVL19:
+  75:Src/synchronous_rectifier.c ****         float dest_volt2 = normalizedVoltage * normalizedVoltage;
+ 252              		.loc 1 75 9 is_stmt 1 view .LVU44
+ 253              		.loc 1 75 15 is_stmt 0 view .LVU45
+ 254 0048 2146     		mov	r1, r4
+ 255 004a 2046     		mov	r0, r4
+ 256              	.LVL20:
+ 257              		.loc 1 75 15 view .LVU46
+ 258 004c FFF7FEFF 		bl	__aeabi_fmul
+ 259              	.LVL21:
+  76:Src/synchronous_rectifier.c **** 
+  77:Src/synchronous_rectifier.c ****         settling_period = MAINS_AMPLITUDE * MAINS_AMPLITUDE * FILTER_CAP * (dest_volt2 - current_vo
+ 260              		.loc 1 77 9 is_stmt 1 view .LVU47
+ 261              		.loc 1 77 88 is_stmt 0 view .LVU48
+ 262 0050 2946     		mov	r1, r5
+ 263 0052 FFF7FEFF 		bl	__aeabi_fsub
+ 264              	.LVL22:
+ 265              		.loc 1 77 88 view .LVU49
+ 266 0056 FFF7FEFF 		bl	__aeabi_f2d
+ 267              	.LVL23:
+ 268              		.loc 1 77 74 view .LVU50
+ 269 005a 2FA3     		adr	r3, .L23+8
+ARM GAS  /tmp/cclH5Ofm.s 			page 7
+
+
+ 270 005c D3E90023 		ldrd	r2, [r3]
+ 271 0060 FFF7FEFF 		bl	__aeabi_dmul
+ 272              	.LVL24:
+ 273              		.loc 1 77 105 view .LVU51
+ 274 0064 2EA3     		adr	r3, .L23+16
+ 275 0066 D3E90023 		ldrd	r2, [r3]
+ 276 006a FFF7FEFF 		bl	__aeabi_ddiv
+ 277              	.LVL25:
+ 278              		.loc 1 77 25 view .LVU52
+ 279 006e FFF7FEFF 		bl	__aeabi_d2f
+ 280              	.LVL26:
+ 281 0072 0546     		mov	r5, r0
+ 282              	.LVL27:
+  78:Src/synchronous_rectifier.c ****                           (2 * CHOCK_IND * MAX_SURGE_CURRENT * MAX_SURGE_CURRENT * MAINS_FREQ);
+  79:Src/synchronous_rectifier.c **** 
+  80:Src/synchronous_rectifier.c ****         AlphaDestination = asinf(normalizedVoltage) / M_PI;
+ 283              		.loc 1 80 9 is_stmt 1 view .LVU53
+ 284              		.loc 1 80 28 is_stmt 0 view .LVU54
+ 285 0074 2046     		mov	r0, r4
+ 286              	.LVL28:
+ 287              		.loc 1 80 28 view .LVU55
+ 288 0076 FFF7FEFF 		bl	asinf
+ 289              	.LVL29:
+ 290 007a FFF7FEFF 		bl	__aeabi_f2d
+ 291              	.LVL30:
+ 292              		.loc 1 80 53 view .LVU56
+ 293 007e 24A3     		adr	r3, .L23
+ 294 0080 D3E90023 		ldrd	r2, [r3]
+ 295 0084 FFF7FEFF 		bl	__aeabi_ddiv
+ 296              	.LVL31:
+ 297 0088 FFF7FEFF 		bl	__aeabi_d2f
+ 298              	.LVL32:
+ 299 008c 0446     		mov	r4, r0
+ 300              	.LVL33:
+ 301              		.loc 1 80 26 view .LVU57
+ 302 008e 284B     		ldr	r3, .L23+32
+ 303 0090 1860     		str	r0, [r3]	@ float
+  81:Src/synchronous_rectifier.c ****         AlphaSlewRate = (AlphaDestination - Alpha) / (settling_period * 1e6);
+ 304              		.loc 1 81 9 is_stmt 1 view .LVU58
+ 305              		.loc 1 81 43 is_stmt 0 view .LVU59
+ 306 0092 294B     		ldr	r3, .L23+40
+ 307 0094 1968     		ldr	r1, [r3]	@ float
+ 308 0096 FFF7FEFF 		bl	__aeabi_fsub
+ 309              	.LVL34:
+ 310 009a FFF7FEFF 		bl	__aeabi_f2d
+ 311              	.LVL35:
+ 312 009e 0646     		mov	r6, r0
+ 313 00a0 0F46     		mov	r7, r1
+ 314              		.loc 1 81 71 view .LVU60
+ 315 00a2 2846     		mov	r0, r5
+ 316 00a4 FFF7FEFF 		bl	__aeabi_f2d
+ 317              	.LVL36:
+ 318 00a8 1FA3     		adr	r3, .L23+24
+ 319 00aa D3E90023 		ldrd	r2, [r3]
+ 320 00ae FFF7FEFF 		bl	__aeabi_dmul
+ 321              	.LVL37:
+ 322              		.loc 1 81 52 view .LVU61
+ARM GAS  /tmp/cclH5Ofm.s 			page 8
+
+
+ 323 00b2 0246     		mov	r2, r0
+ 324 00b4 0B46     		mov	r3, r1
+ 325 00b6 3046     		mov	r0, r6
+ 326 00b8 3946     		mov	r1, r7
+ 327 00ba FFF7FEFF 		bl	__aeabi_ddiv
+ 328              	.LVL38:
+ 329 00be FFF7FEFF 		bl	__aeabi_d2f
+ 330              	.LVL39:
+ 331              		.loc 1 81 23 view .LVU62
+ 332 00c2 1E4B     		ldr	r3, .L23+44
+ 333 00c4 1860     		str	r0, [r3]	@ float
+  82:Src/synchronous_rectifier.c **** 
+  83:Src/synchronous_rectifier.c ****         // If full turned on; set destination angle to M_PI.
+  84:Src/synchronous_rectifier.c ****         if (AlphaDestination > 0.499f)
+ 334              		.loc 1 84 9 is_stmt 1 view .LVU63
+ 335              		.loc 1 84 12 is_stmt 0 view .LVU64
+ 336 00c6 1B49     		ldr	r1, .L23+36
+ 337 00c8 2046     		mov	r0, r4
+ 338 00ca FFF7FEFF 		bl	__aeabi_fcmpgt
+ 339              	.LVL40:
+ 340 00ce F0B1     		cbz	r0, .L9
+  85:Src/synchronous_rectifier.c ****         {
+  86:Src/synchronous_rectifier.c ****             AlphaDestination = 1.0f;
+ 341              		.loc 1 86 13 is_stmt 1 view .LVU65
+ 342              		.loc 1 86 30 is_stmt 0 view .LVU66
+ 343 00d0 174B     		ldr	r3, .L23+32
+ 344 00d2 4FF07E52 		mov	r2, #1065353216
+ 345 00d6 1A60     		str	r2, [r3]	@ float
+ 346 00d8 19E0     		b	.L9
+ 347              	.LVL41:
+ 348              	.L21:
+ 349              		.loc 1 86 30 view .LVU67
+ 350              	.LBE2:
+  87:Src/synchronous_rectifier.c ****         }
+  88:Src/synchronous_rectifier.c ****     }
+  89:Src/synchronous_rectifier.c ****     else
+  90:Src/synchronous_rectifier.c ****     {
+  91:Src/synchronous_rectifier.c ****         AlphaDestination = asinf(normalizedVoltage) / M_PI;
+ 351              		.loc 1 91 9 is_stmt 1 view .LVU68
+ 352              		.loc 1 91 28 is_stmt 0 view .LVU69
+ 353 00da 2046     		mov	r0, r4
+ 354 00dc FFF7FEFF 		bl	asinf
+ 355              	.LVL42:
+ 356 00e0 FFF7FEFF 		bl	__aeabi_f2d
+ 357              	.LVL43:
+ 358              		.loc 1 91 53 view .LVU70
+ 359 00e4 0AA3     		adr	r3, .L23
+ 360 00e6 D3E90023 		ldrd	r2, [r3]
+ 361 00ea FFF7FEFF 		bl	__aeabi_ddiv
+ 362              	.LVL44:
+ 363 00ee FFF7FEFF 		bl	__aeabi_d2f
+ 364              	.LVL45:
+ 365              		.loc 1 91 26 view .LVU71
+ 366 00f2 0F4B     		ldr	r3, .L23+32
+ 367 00f4 1860     		str	r0, [r3]	@ float
+  92:Src/synchronous_rectifier.c **** 
+  93:Src/synchronous_rectifier.c ****         // If fully turned on; set destination angle 1.
+ARM GAS  /tmp/cclH5Ofm.s 			page 9
+
+
+  94:Src/synchronous_rectifier.c ****         if (AlphaDestination > 0.499f)
+ 368              		.loc 1 94 9 is_stmt 1 view .LVU72
+ 369              		.loc 1 94 12 is_stmt 0 view .LVU73
+ 370 00f6 0F49     		ldr	r1, .L23+36
+ 371 00f8 FFF7FEFF 		bl	__aeabi_fcmpgt
+ 372              	.LVL46:
+ 373 00fc 18B1     		cbz	r0, .L15
+  95:Src/synchronous_rectifier.c ****         {
+  96:Src/synchronous_rectifier.c ****             AlphaDestination = 1.0f;
+ 374              		.loc 1 96 13 is_stmt 1 view .LVU74
+ 375              		.loc 1 96 30 is_stmt 0 view .LVU75
+ 376 00fe 0C4B     		ldr	r3, .L23+32
+ 377 0100 4FF07E52 		mov	r2, #1065353216
+ 378 0104 1A60     		str	r2, [r3]	@ float
+ 379              	.L15:
+  97:Src/synchronous_rectifier.c ****         }
+  98:Src/synchronous_rectifier.c **** 
+  99:Src/synchronous_rectifier.c ****         Alpha = AlphaDestination;
+ 380              		.loc 1 99 9 is_stmt 1 view .LVU76
+ 381              		.loc 1 99 15 is_stmt 0 view .LVU77
+ 382 0106 0A4B     		ldr	r3, .L23+32
+ 383 0108 1A68     		ldr	r2, [r3]	@ float
+ 384 010a 0B4B     		ldr	r3, .L23+40
+ 385 010c 1A60     		str	r2, [r3]	@ float
+ 386              	.LVL47:
+ 387              	.L9:
+ 100:Src/synchronous_rectifier.c ****     }
+ 101:Src/synchronous_rectifier.c **** }
+ 388              		.loc 1 101 1 view .LVU78
+ 389 010e F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 390              	.L24:
+ 391              		.align	3
+ 392              	.L23:
+ 393 0110 182D4454 		.word	1413754136
+ 394 0114 FB210940 		.word	1074340347
+ 395 0118 67666666 		.word	1717986919
+ 396 011c 66266240 		.word	1080174182
+ 397 0120 7B14AE47 		.word	1202590843
+ 398 0124 E17A1C40 		.word	1075608289
+ 399 0128 00000000 		.word	0
+ 400 012c 80842E41 		.word	1093567616
+ 401 0130 00000000 		.word	.LANCHOR1
+ 402 0134 EE7CFF3E 		.word	1056931054
+ 403 0138 00000000 		.word	.LANCHOR0
+ 404 013c 00000000 		.word	.LANCHOR2
+ 405              		.cfi_endproc
+ 406              	.LFE68:
+ 408              		.global	__aeabi_i2f
+ 409              		.global	__aeabi_fcmplt
+ 410              		.global	__aeabi_fadd
+ 411              		.global	__aeabi_dadd
+ 412              		.global	__aeabi_f2uiz
+ 413              		.section	.text.HAL_TIM_IC_CaptureCallback,"ax",%progbits
+ 414              		.align	1
+ 415              		.global	HAL_TIM_IC_CaptureCallback
+ 416              		.syntax unified
+ 417              		.thumb
+ARM GAS  /tmp/cclH5Ofm.s 			page 10
+
+
+ 418              		.thumb_func
+ 419              		.fpu softvfp
+ 421              	HAL_TIM_IC_CaptureCallback:
+ 422              	.LVL48:
+ 423              	.LFB69:
+ 102:Src/synchronous_rectifier.c **** 
+ 103:Src/synchronous_rectifier.c **** /* Callback implementations ------------------------------------------------*/
+ 104:Src/synchronous_rectifier.c **** void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
+ 105:Src/synchronous_rectifier.c **** {
+ 424              		.loc 1 105 1 is_stmt 1 view -0
+ 425              		.cfi_startproc
+ 426              		@ args = 0, pretend = 0, frame = 16
+ 427              		@ frame_needed = 0, uses_anonymous_args = 0
+ 106:Src/synchronous_rectifier.c ****     // Findout new capture value. Some kind of moving average filter may help resolving this issue.
+ 107:Src/synchronous_rectifier.c ****     if (htim == &htim3)
+ 428              		.loc 1 107 5 view .LVU80
+ 429              		.loc 1 107 8 is_stmt 0 view .LVU81
+ 430 0000 A94B     		ldr	r3, .L59+8
+ 431 0002 9842     		cmp	r0, r3
+ 432 0004 00D0     		beq	.L54
+ 433 0006 7047     		bx	lr
+ 434              	.L54:
+ 105:Src/synchronous_rectifier.c ****     // Findout new capture value. Some kind of moving average filter may help resolving this issue.
+ 435              		.loc 1 105 1 view .LVU82
+ 436 0008 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 437              	.LCFI3:
+ 438              		.cfi_def_cfa_offset 24
+ 439              		.cfi_offset 4, -24
+ 440              		.cfi_offset 5, -20
+ 441              		.cfi_offset 6, -16
+ 442              		.cfi_offset 7, -12
+ 443              		.cfi_offset 8, -8
+ 444              		.cfi_offset 14, -4
+ 445 000c 84B0     		sub	sp, sp, #16
+ 446              	.LCFI4:
+ 447              		.cfi_def_cfa_offset 40
+ 448 000e 0446     		mov	r4, r0
+ 108:Src/synchronous_rectifier.c ****     {
+ 109:Src/synchronous_rectifier.c ****         // If rising edge has been detected.
+ 110:Src/synchronous_rectifier.c ****         if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3)
+ 449              		.loc 1 110 9 is_stmt 1 view .LVU83
+ 450              		.loc 1 110 17 is_stmt 0 view .LVU84
+ 451 0010 037F     		ldrb	r3, [r0, #28]	@ zero_extendqisi2
+ 452              		.loc 1 110 12 view .LVU85
+ 453 0012 042B     		cmp	r3, #4
+ 454 0014 06D0     		beq	.L55
+ 455              	.LVL49:
+ 456              	.L27:
+ 111:Src/synchronous_rectifier.c ****         {
+ 112:Src/synchronous_rectifier.c ****             if (!PhaseLocked)
+ 113:Src/synchronous_rectifier.c ****             {
+ 114:Src/synchronous_rectifier.c ****                 LastCapture = htim->Instance->CCR3;
+ 115:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 116:Src/synchronous_rectifier.c ****                 return;
+ 117:Src/synchronous_rectifier.c ****             }
+ 118:Src/synchronous_rectifier.c **** 
+ 119:Src/synchronous_rectifier.c ****             HAL_TIM_Base_Stop_IT(&htim2);
+ARM GAS  /tmp/cclH5Ofm.s 			page 11
+
+
+ 120:Src/synchronous_rectifier.c **** 
+ 121:Src/synchronous_rectifier.c ****             volatile uint16_t ccr;
+ 122:Src/synchronous_rectifier.c ****             volatile float zcr_period;
+ 123:Src/synchronous_rectifier.c **** 
+ 124:Src/synchronous_rectifier.c ****             ccr = htim->Instance->CCR3;
+ 125:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 126:Src/synchronous_rectifier.c **** 
+ 127:Src/synchronous_rectifier.c ****             if (zcr_period < 0.0)
+ 128:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 129:Src/synchronous_rectifier.c **** 
+ 130:Src/synchronous_rectifier.c ****             MeanZeroCrossingPeriodInUs = zcr_period * ZERO_CROSSING_PERIOD_EMA_FILTER_COEFF +
+ 131:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 132:Src/synchronous_rectifier.c **** 
+ 133:Src/synchronous_rectifier.c ****             if (AlphaDestination > Alpha)
+ 134:Src/synchronous_rectifier.c ****             {
+ 135:Src/synchronous_rectifier.c ****                 Alpha += (zcr_period * AlphaSlewRate);
+ 136:Src/synchronous_rectifier.c ****             }
+ 137:Src/synchronous_rectifier.c **** 
+ 138:Src/synchronous_rectifier.c ****             LastCapture = ccr;
+ 139:Src/synchronous_rectifier.c **** 
+ 140:Src/synchronous_rectifier.c ****             if (Alpha < ALPHA_OF_BRIDGE_TRANSITION)
+ 141:Src/synchronous_rectifier.c ****             {
+ 142:Src/synchronous_rectifier.c ****                 HAL_GPIO_WritePin(THYRISTOR1_DRIVE_GPIO_Port, THYRISTOR1_DRIVE_Pin, GPIO_PIN_RESET)
+ 143:Src/synchronous_rectifier.c ****                 ToSetDrive0 = TRUE;
+ 144:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 145:Src/synchronous_rectifier.c **** 
+ 146:Src/synchronous_rectifier.c ****                 __HAL_TIM_SET_AUTORELOAD(&htim2, (uint16_t)(MeanZeroCrossingPeriodInUs * (1.0f - Al
+ 147:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim2);
+ 148:Src/synchronous_rectifier.c ****                 __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+ 149:Src/synchronous_rectifier.c ****             }
+ 150:Src/synchronous_rectifier.c ****             else
+ 151:Src/synchronous_rectifier.c ****             {
+ 152:Src/synchronous_rectifier.c ****                 ToSetDrive0 = FALSE;
+ 153:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 154:Src/synchronous_rectifier.c **** 
+ 155:Src/synchronous_rectifier.c ****                 HAL_GPIO_WritePin(THYRISTOR0_DRIVE_GPIO_Port, THYRISTOR0_DRIVE_Pin, GPIO_PIN_SET);
+ 156:Src/synchronous_rectifier.c ****             }
+ 157:Src/synchronous_rectifier.c ****         }
+ 158:Src/synchronous_rectifier.c ****         if (htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4)
+ 457              		.loc 1 158 9 is_stmt 1 view .LVU86
+ 458              		.loc 1 158 17 is_stmt 0 view .LVU87
+ 459 0016 237F     		ldrb	r3, [r4, #28]	@ zero_extendqisi2
+ 460              		.loc 1 158 12 view .LVU88
+ 461 0018 082B     		cmp	r3, #8
+ 462 001a 00F0A380 		beq	.L56
+ 463              	.LVL50:
+ 464              	.L25:
+ 159:Src/synchronous_rectifier.c ****         {
+ 160:Src/synchronous_rectifier.c ****             if (!PhaseLocked)
+ 161:Src/synchronous_rectifier.c ****             {
+ 162:Src/synchronous_rectifier.c ****                 LastCapture = htim->Instance->CCR4;
+ 163:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 164:Src/synchronous_rectifier.c ****                 return;
+ 165:Src/synchronous_rectifier.c ****             }
+ 166:Src/synchronous_rectifier.c **** 
+ 167:Src/synchronous_rectifier.c ****             HAL_TIM_Base_Stop_IT(&htim4);
+ 168:Src/synchronous_rectifier.c **** 
+ARM GAS  /tmp/cclH5Ofm.s 			page 12
+
+
+ 169:Src/synchronous_rectifier.c ****             volatile uint16_t ccr;
+ 170:Src/synchronous_rectifier.c ****             volatile float zcr_period;
+ 171:Src/synchronous_rectifier.c **** 
+ 172:Src/synchronous_rectifier.c ****             ccr = htim->Instance->CCR4;
+ 173:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 174:Src/synchronous_rectifier.c **** 
+ 175:Src/synchronous_rectifier.c ****             if (zcr_period < 0.0)
+ 176:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 177:Src/synchronous_rectifier.c **** 
+ 178:Src/synchronous_rectifier.c ****             MeanZeroCrossingPeriodInUs = zcr_period * ZERO_CROSSING_PERIOD_EMA_FILTER_COEFF +
+ 179:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 180:Src/synchronous_rectifier.c **** 
+ 181:Src/synchronous_rectifier.c ****             if (AlphaDestination > Alpha)
+ 182:Src/synchronous_rectifier.c ****             {
+ 183:Src/synchronous_rectifier.c ****                 Alpha += (zcr_period * AlphaSlewRate);
+ 184:Src/synchronous_rectifier.c ****             }
+ 185:Src/synchronous_rectifier.c **** 
+ 186:Src/synchronous_rectifier.c ****             LastCapture = ccr;
+ 187:Src/synchronous_rectifier.c **** 
+ 188:Src/synchronous_rectifier.c ****             if (Alpha < ALPHA_OF_BRIDGE_TRANSITION)
+ 189:Src/synchronous_rectifier.c ****             {
+ 190:Src/synchronous_rectifier.c ****                 HAL_GPIO_WritePin(THYRISTOR0_DRIVE_GPIO_Port, THYRISTOR0_DRIVE_Pin, GPIO_PIN_RESET)
+ 191:Src/synchronous_rectifier.c ****                 ToSetDrive0 = FALSE;
+ 192:Src/synchronous_rectifier.c ****                 ToSetDrive1 = TRUE;
+ 193:Src/synchronous_rectifier.c **** 
+ 194:Src/synchronous_rectifier.c ****                 __HAL_TIM_SET_AUTORELOAD(&htim4, (uint16_t)(MeanZeroCrossingPeriodInUs * (1.0f - Al
+ 195:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim4);
+ 196:Src/synchronous_rectifier.c ****                 __HAL_TIM_CLEAR_FLAG(&htim4, TIM_FLAG_UPDATE);
+ 197:Src/synchronous_rectifier.c ****             }
+ 198:Src/synchronous_rectifier.c ****             else
+ 199:Src/synchronous_rectifier.c ****             {
+ 200:Src/synchronous_rectifier.c ****                 ToSetDrive0 = FALSE;
+ 201:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 202:Src/synchronous_rectifier.c **** 
+ 203:Src/synchronous_rectifier.c ****                 HAL_GPIO_WritePin(THYRISTOR1_DRIVE_GPIO_Port, THYRISTOR1_DRIVE_Pin, GPIO_PIN_SET);
+ 204:Src/synchronous_rectifier.c ****             }
+ 205:Src/synchronous_rectifier.c ****         }
+ 206:Src/synchronous_rectifier.c ****     }
+ 207:Src/synchronous_rectifier.c **** }
+ 465              		.loc 1 207 1 view .LVU89
+ 466 001e 04B0     		add	sp, sp, #16
+ 467              	.LCFI5:
+ 468              		.cfi_remember_state
+ 469              		.cfi_def_cfa_offset 24
+ 470              		@ sp needed
+ 471 0020 BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 472              	.LVL51:
+ 473              	.L55:
+ 474              	.LCFI6:
+ 475              		.cfi_restore_state
+ 476              	.LBB3:
+ 112:Src/synchronous_rectifier.c ****             {
+ 477              		.loc 1 112 13 is_stmt 1 view .LVU90
+ 112:Src/synchronous_rectifier.c ****             {
+ 478              		.loc 1 112 17 is_stmt 0 view .LVU91
+ 479 0024 A14B     		ldr	r3, .L59+12
+ 480 0026 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ARM GAS  /tmp/cclH5Ofm.s 			page 13
+
+
+ 112:Src/synchronous_rectifier.c ****             {
+ 481              		.loc 1 112 16 view .LVU92
+ 482 0028 43B9     		cbnz	r3, .L28
+ 114:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 483              		.loc 1 114 17 is_stmt 1 view .LVU93
+ 114:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 484              		.loc 1 114 35 is_stmt 0 view .LVU94
+ 485 002a 0368     		ldr	r3, [r0]
+ 114:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 486              		.loc 1 114 45 view .LVU95
+ 487 002c DB6B     		ldr	r3, [r3, #60]
+ 114:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 488              		.loc 1 114 29 view .LVU96
+ 489 002e 9BB2     		uxth	r3, r3
+ 490 0030 9F4A     		ldr	r2, .L59+16
+ 491 0032 1380     		strh	r3, [r2]	@ movhi
+ 115:Src/synchronous_rectifier.c ****                 return;
+ 492              		.loc 1 115 17 is_stmt 1 view .LVU97
+ 115:Src/synchronous_rectifier.c ****                 return;
+ 493              		.loc 1 115 29 is_stmt 0 view .LVU98
+ 494 0034 9D4B     		ldr	r3, .L59+12
+ 495 0036 0122     		movs	r2, #1
+ 496 0038 1A70     		strb	r2, [r3]
+ 116:Src/synchronous_rectifier.c ****             }
+ 497              		.loc 1 116 17 is_stmt 1 view .LVU99
+ 498 003a F0E7     		b	.L25
+ 499              	.L28:
+ 119:Src/synchronous_rectifier.c **** 
+ 500              		.loc 1 119 13 view .LVU100
+ 501 003c 9D48     		ldr	r0, .L59+20
+ 502              	.LVL52:
+ 119:Src/synchronous_rectifier.c **** 
+ 503              		.loc 1 119 13 is_stmt 0 view .LVU101
+ 504 003e FFF7FEFF 		bl	HAL_TIM_Base_Stop_IT
+ 505              	.LVL53:
+ 121:Src/synchronous_rectifier.c ****             volatile float zcr_period;
+ 506              		.loc 1 121 13 is_stmt 1 view .LVU102
+ 122:Src/synchronous_rectifier.c **** 
+ 507              		.loc 1 122 13 view .LVU103
+ 124:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 508              		.loc 1 124 13 view .LVU104
+ 124:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 509              		.loc 1 124 23 is_stmt 0 view .LVU105
+ 510 0042 2368     		ldr	r3, [r4]
+ 124:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 511              		.loc 1 124 33 view .LVU106
+ 512 0044 DB6B     		ldr	r3, [r3, #60]
+ 124:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 513              		.loc 1 124 17 view .LVU107
+ 514 0046 9BB2     		uxth	r3, r3
+ 515 0048 ADF80430 		strh	r3, [sp, #4]	@ movhi
+ 125:Src/synchronous_rectifier.c **** 
+ 516              		.loc 1 125 13 is_stmt 1 view .LVU108
+ 125:Src/synchronous_rectifier.c **** 
+ 517              		.loc 1 125 38 is_stmt 0 view .LVU109
+ 518 004c BDF80400 		ldrh	r0, [sp, #4]
+ 519 0050 974B     		ldr	r3, .L59+16
+ARM GAS  /tmp/cclH5Ofm.s 			page 14
+
+
+ 520 0052 1B88     		ldrh	r3, [r3]
+ 125:Src/synchronous_rectifier.c **** 
+ 521              		.loc 1 125 26 view .LVU110
+ 522 0054 C01A     		subs	r0, r0, r3
+ 523 0056 FFF7FEFF 		bl	__aeabi_i2f
+ 524              	.LVL54:
+ 125:Src/synchronous_rectifier.c **** 
+ 525              		.loc 1 125 24 view .LVU111
+ 526 005a 0290     		str	r0, [sp, #8]	@ float
+ 127:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 527              		.loc 1 127 13 is_stmt 1 view .LVU112
+ 127:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 528              		.loc 1 127 28 is_stmt 0 view .LVU113
+ 529 005c 0298     		ldr	r0, [sp, #8]	@ float
+ 127:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 530              		.loc 1 127 16 view .LVU114
+ 531 005e 0021     		movs	r1, #0
+ 532 0060 FFF7FEFF 		bl	__aeabi_fcmplt
+ 533              	.LVL55:
+ 534 0064 0028     		cmp	r0, #0
+ 535 0066 6AD1     		bne	.L57
+ 536              	.L29:
+ 130:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 537              		.loc 1 130 13 is_stmt 1 view .LVU115
+ 130:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 538              		.loc 1 130 53 is_stmt 0 view .LVU116
+ 539 0068 0298     		ldr	r0, [sp, #8]	@ float
+ 540 006a 9349     		ldr	r1, .L59+24
+ 541 006c FFF7FEFF 		bl	__aeabi_fmul
+ 542              	.LVL56:
+ 543 0070 FFF7FEFF 		bl	__aeabi_f2d
+ 544              	.LVL57:
+ 545 0074 0646     		mov	r6, r0
+ 546 0076 0F46     		mov	r7, r1
+ 131:Src/synchronous_rectifier.c **** 
+ 547              		.loc 1 131 69 view .LVU117
+ 548 0078 904D     		ldr	r5, .L59+28
+ 549 007a 2868     		ldr	r0, [r5]	@ float
+ 550 007c FFF7FEFF 		bl	__aeabi_f2d
+ 551              	.LVL58:
+ 552 0080 87A3     		adr	r3, .L59
+ 553 0082 D3E90023 		ldrd	r2, [r3]
+ 554 0086 FFF7FEFF 		bl	__aeabi_dmul
+ 555              	.LVL59:
+ 130:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 556              		.loc 1 130 93 view .LVU118
+ 557 008a 0246     		mov	r2, r0
+ 558 008c 0B46     		mov	r3, r1
+ 559 008e 3046     		mov	r0, r6
+ 560 0090 3946     		mov	r1, r7
+ 561 0092 FFF7FEFF 		bl	__aeabi_dadd
+ 562              	.LVL60:
+ 563 0096 FFF7FEFF 		bl	__aeabi_d2f
+ 564              	.LVL61:
+ 130:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 565              		.loc 1 130 40 view .LVU119
+ 566 009a 2860     		str	r0, [r5]	@ float
+ARM GAS  /tmp/cclH5Ofm.s 			page 15
+
+
+ 133:Src/synchronous_rectifier.c ****             {
+ 567              		.loc 1 133 13 is_stmt 1 view .LVU120
+ 133:Src/synchronous_rectifier.c ****             {
+ 568              		.loc 1 133 34 is_stmt 0 view .LVU121
+ 569 009c 884B     		ldr	r3, .L59+32
+ 570 009e 1968     		ldr	r1, [r3]	@ float
+ 133:Src/synchronous_rectifier.c ****             {
+ 571              		.loc 1 133 16 view .LVU122
+ 572 00a0 884B     		ldr	r3, .L59+36
+ 573 00a2 1868     		ldr	r0, [r3]	@ float
+ 574 00a4 FFF7FEFF 		bl	__aeabi_fcmpgt
+ 575              	.LVL62:
+ 576 00a8 58B1     		cbz	r0, .L31
+ 135:Src/synchronous_rectifier.c ****             }
+ 577              		.loc 1 135 17 is_stmt 1 view .LVU123
+ 135:Src/synchronous_rectifier.c ****             }
+ 578              		.loc 1 135 38 is_stmt 0 view .LVU124
+ 579 00aa 0298     		ldr	r0, [sp, #8]	@ float
+ 580 00ac 864B     		ldr	r3, .L59+40
+ 581 00ae 1968     		ldr	r1, [r3]	@ float
+ 582 00b0 FFF7FEFF 		bl	__aeabi_fmul
+ 583              	.LVL63:
+ 135:Src/synchronous_rectifier.c ****             }
+ 584              		.loc 1 135 23 view .LVU125
+ 585 00b4 824D     		ldr	r5, .L59+32
+ 586 00b6 2B68     		ldr	r3, [r5]	@ float
+ 587 00b8 0146     		mov	r1, r0
+ 588 00ba 1846     		mov	r0, r3
+ 589 00bc FFF7FEFF 		bl	__aeabi_fadd
+ 590              	.LVL64:
+ 591 00c0 2860     		str	r0, [r5]	@ float
+ 592              	.L31:
+ 138:Src/synchronous_rectifier.c **** 
+ 593              		.loc 1 138 13 is_stmt 1 view .LVU126
+ 138:Src/synchronous_rectifier.c **** 
+ 594              		.loc 1 138 25 is_stmt 0 view .LVU127
+ 595 00c2 BDF80430 		ldrh	r3, [sp, #4]
+ 596 00c6 9BB2     		uxth	r3, r3
+ 597 00c8 794A     		ldr	r2, .L59+16
+ 598 00ca 1380     		strh	r3, [r2]	@ movhi
+ 140:Src/synchronous_rectifier.c ****             {
+ 599              		.loc 1 140 13 is_stmt 1 view .LVU128
+ 140:Src/synchronous_rectifier.c ****             {
+ 600              		.loc 1 140 23 is_stmt 0 view .LVU129
+ 601 00cc 7C4B     		ldr	r3, .L59+32
+ 602 00ce 1868     		ldr	r0, [r3]	@ float
+ 140:Src/synchronous_rectifier.c ****             {
+ 603              		.loc 1 140 16 view .LVU130
+ 604 00d0 7E49     		ldr	r1, .L59+44
+ 605 00d2 FFF7FEFF 		bl	__aeabi_fcmplt
+ 606              	.LVL65:
+ 607 00d6 0028     		cmp	r0, #0
+ 608 00d8 38D0     		beq	.L48
+ 142:Src/synchronous_rectifier.c ****                 ToSetDrive0 = TRUE;
+ 609              		.loc 1 142 17 is_stmt 1 view .LVU131
+ 610 00da 0022     		movs	r2, #0
+ 611 00dc 4FF48071 		mov	r1, #256
+ARM GAS  /tmp/cclH5Ofm.s 			page 16
+
+
+ 612 00e0 7B48     		ldr	r0, .L59+48
+ 613 00e2 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 614              	.LVL66:
+ 143:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 615              		.loc 1 143 17 view .LVU132
+ 143:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 616              		.loc 1 143 29 is_stmt 0 view .LVU133
+ 617 00e6 7B4B     		ldr	r3, .L59+52
+ 618 00e8 0122     		movs	r2, #1
+ 619 00ea 1A70     		strb	r2, [r3]
+ 144:Src/synchronous_rectifier.c **** 
+ 620              		.loc 1 144 17 is_stmt 1 view .LVU134
+ 144:Src/synchronous_rectifier.c **** 
+ 621              		.loc 1 144 29 is_stmt 0 view .LVU135
+ 622 00ec 7A4B     		ldr	r3, .L59+56
+ 623 00ee 0022     		movs	r2, #0
+ 624 00f0 1A70     		strb	r2, [r3]
+ 146:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim2);
+ 625              		.loc 1 146 17 is_stmt 1 view .LVU136
+ 146:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim2);
+ 626              		.loc 1 146 17 view .LVU137
+ 627 00f2 734F     		ldr	r7, .L59+32
+ 628 00f4 3968     		ldr	r1, [r7]	@ float
+ 629 00f6 4FF07E50 		mov	r0, #1065353216
+ 630 00fa FFF7FEFF 		bl	__aeabi_fsub
+ 631              	.LVL67:
+ 632 00fe 6F4E     		ldr	r6, .L59+28
+ 633 0100 3168     		ldr	r1, [r6]	@ float
+ 634 0102 FFF7FEFF 		bl	__aeabi_fmul
+ 635              	.LVL68:
+ 636 0106 6B4D     		ldr	r5, .L59+20
+ 637 0108 D5F80080 		ldr	r8, [r5]
+ 638 010c FFF7FEFF 		bl	__aeabi_f2uiz
+ 639              	.LVL69:
+ 640 0110 80B2     		uxth	r0, r0
+ 641 0112 C8F82C00 		str	r0, [r8, #44]
+ 146:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim2);
+ 642              		.loc 1 146 17 view .LVU138
+ 643 0116 3968     		ldr	r1, [r7]	@ float
+ 644 0118 4FF07E50 		mov	r0, #1065353216
+ 645 011c FFF7FEFF 		bl	__aeabi_fsub
+ 646              	.LVL70:
+ 647 0120 3168     		ldr	r1, [r6]	@ float
+ 648 0122 FFF7FEFF 		bl	__aeabi_fmul
+ 649              	.LVL71:
+ 650 0126 FFF7FEFF 		bl	__aeabi_f2uiz
+ 651              	.LVL72:
+ 652 012a 80B2     		uxth	r0, r0
+ 653 012c E860     		str	r0, [r5, #12]
+ 147:Src/synchronous_rectifier.c ****                 __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+ 654              		.loc 1 147 17 view .LVU139
+ 655 012e 2846     		mov	r0, r5
+ 656 0130 FFF7FEFF 		bl	HAL_TIM_Base_Start_IT
+ 657              	.LVL73:
+ 148:Src/synchronous_rectifier.c ****             }
+ 658              		.loc 1 148 17 view .LVU140
+ 659 0134 2B68     		ldr	r3, [r5]
+ARM GAS  /tmp/cclH5Ofm.s 			page 17
+
+
+ 660 0136 6FF00102 		mvn	r2, #1
+ 661 013a 1A61     		str	r2, [r3, #16]
+ 662 013c 6BE7     		b	.L27
+ 663              	.L57:
+ 128:Src/synchronous_rectifier.c **** 
+ 664              		.loc 1 128 17 view .LVU141
+ 128:Src/synchronous_rectifier.c **** 
+ 665              		.loc 1 128 28 is_stmt 0 view .LVU142
+ 666 013e 0298     		ldr	r0, [sp, #8]	@ float
+ 667 0140 4FF08F41 		mov	r1, #1199570944
+ 668 0144 FFF7FEFF 		bl	__aeabi_fadd
+ 669              	.LVL74:
+ 670 0148 0290     		str	r0, [sp, #8]	@ float
+ 671 014a 8DE7     		b	.L29
+ 672              	.L48:
+ 152:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 673              		.loc 1 152 17 is_stmt 1 view .LVU143
+ 152:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 674              		.loc 1 152 29 is_stmt 0 view .LVU144
+ 675 014c 0023     		movs	r3, #0
+ 676 014e 614A     		ldr	r2, .L59+52
+ 677 0150 1370     		strb	r3, [r2]
+ 153:Src/synchronous_rectifier.c **** 
+ 678              		.loc 1 153 17 is_stmt 1 view .LVU145
+ 153:Src/synchronous_rectifier.c **** 
+ 679              		.loc 1 153 29 is_stmt 0 view .LVU146
+ 680 0152 614A     		ldr	r2, .L59+56
+ 681 0154 1370     		strb	r3, [r2]
+ 155:Src/synchronous_rectifier.c ****             }
+ 682              		.loc 1 155 17 is_stmt 1 view .LVU147
+ 683 0156 0122     		movs	r2, #1
+ 684 0158 4FF40071 		mov	r1, #512
+ 685 015c 5C48     		ldr	r0, .L59+48
+ 686 015e FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 687              	.LVL75:
+ 688 0162 58E7     		b	.L27
+ 689              	.L56:
+ 155:Src/synchronous_rectifier.c ****             }
+ 690              		.loc 1 155 17 is_stmt 0 view .LVU148
+ 691              	.LBE3:
+ 692              	.LBB4:
+ 160:Src/synchronous_rectifier.c ****             {
+ 693              		.loc 1 160 13 is_stmt 1 view .LVU149
+ 160:Src/synchronous_rectifier.c ****             {
+ 694              		.loc 1 160 17 is_stmt 0 view .LVU150
+ 695 0164 514B     		ldr	r3, .L59+12
+ 696 0166 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 160:Src/synchronous_rectifier.c ****             {
+ 697              		.loc 1 160 16 view .LVU151
+ 698 0168 43B9     		cbnz	r3, .L35
+ 162:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 699              		.loc 1 162 17 is_stmt 1 view .LVU152
+ 162:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 700              		.loc 1 162 35 is_stmt 0 view .LVU153
+ 701 016a 2368     		ldr	r3, [r4]
+ 162:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 702              		.loc 1 162 45 view .LVU154
+ARM GAS  /tmp/cclH5Ofm.s 			page 18
+
+
+ 703 016c 1B6C     		ldr	r3, [r3, #64]
+ 162:Src/synchronous_rectifier.c ****                 PhaseLocked = TRUE;
+ 704              		.loc 1 162 29 view .LVU155
+ 705 016e 9BB2     		uxth	r3, r3
+ 706 0170 4F4A     		ldr	r2, .L59+16
+ 707 0172 1380     		strh	r3, [r2]	@ movhi
+ 163:Src/synchronous_rectifier.c ****                 return;
+ 708              		.loc 1 163 17 is_stmt 1 view .LVU156
+ 163:Src/synchronous_rectifier.c ****                 return;
+ 709              		.loc 1 163 29 is_stmt 0 view .LVU157
+ 710 0174 4D4B     		ldr	r3, .L59+12
+ 711 0176 0122     		movs	r2, #1
+ 712 0178 1A70     		strb	r2, [r3]
+ 164:Src/synchronous_rectifier.c ****             }
+ 713              		.loc 1 164 17 is_stmt 1 view .LVU158
+ 714 017a 50E7     		b	.L25
+ 715              	.L35:
+ 167:Src/synchronous_rectifier.c **** 
+ 716              		.loc 1 167 13 view .LVU159
+ 717 017c 5748     		ldr	r0, .L59+60
+ 718 017e FFF7FEFF 		bl	HAL_TIM_Base_Stop_IT
+ 719              	.LVL76:
+ 169:Src/synchronous_rectifier.c ****             volatile float zcr_period;
+ 720              		.loc 1 169 13 view .LVU160
+ 170:Src/synchronous_rectifier.c **** 
+ 721              		.loc 1 170 13 view .LVU161
+ 172:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 722              		.loc 1 172 13 view .LVU162
+ 172:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 723              		.loc 1 172 23 is_stmt 0 view .LVU163
+ 724 0182 2368     		ldr	r3, [r4]
+ 172:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 725              		.loc 1 172 33 view .LVU164
+ 726 0184 1B6C     		ldr	r3, [r3, #64]
+ 172:Src/synchronous_rectifier.c ****             zcr_period = (float)(ccr - LastCapture);
+ 727              		.loc 1 172 17 view .LVU165
+ 728 0186 9BB2     		uxth	r3, r3
+ 729 0188 ADF80630 		strh	r3, [sp, #6]	@ movhi
+ 173:Src/synchronous_rectifier.c **** 
+ 730              		.loc 1 173 13 is_stmt 1 view .LVU166
+ 173:Src/synchronous_rectifier.c **** 
+ 731              		.loc 1 173 38 is_stmt 0 view .LVU167
+ 732 018c BDF80600 		ldrh	r0, [sp, #6]
+ 733 0190 474B     		ldr	r3, .L59+16
+ 734 0192 1B88     		ldrh	r3, [r3]
+ 173:Src/synchronous_rectifier.c **** 
+ 735              		.loc 1 173 26 view .LVU168
+ 736 0194 C01A     		subs	r0, r0, r3
+ 737 0196 FFF7FEFF 		bl	__aeabi_i2f
+ 738              	.LVL77:
+ 173:Src/synchronous_rectifier.c **** 
+ 739              		.loc 1 173 24 view .LVU169
+ 740 019a 0390     		str	r0, [sp, #12]	@ float
+ 175:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 741              		.loc 1 175 13 is_stmt 1 view .LVU170
+ 175:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 742              		.loc 1 175 28 is_stmt 0 view .LVU171
+ARM GAS  /tmp/cclH5Ofm.s 			page 19
+
+
+ 743 019c 0398     		ldr	r0, [sp, #12]	@ float
+ 175:Src/synchronous_rectifier.c ****                 zcr_period += 65536.0f;
+ 744              		.loc 1 175 16 view .LVU172
+ 745 019e 0021     		movs	r1, #0
+ 746 01a0 FFF7FEFF 		bl	__aeabi_fcmplt
+ 747              	.LVL78:
+ 748 01a4 0028     		cmp	r0, #0
+ 749 01a6 68D1     		bne	.L58
+ 750              	.L36:
+ 178:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 751              		.loc 1 178 13 is_stmt 1 view .LVU173
+ 178:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 752              		.loc 1 178 53 is_stmt 0 view .LVU174
+ 753 01a8 0398     		ldr	r0, [sp, #12]	@ float
+ 754 01aa 4349     		ldr	r1, .L59+24
+ 755 01ac FFF7FEFF 		bl	__aeabi_fmul
+ 756              	.LVL79:
+ 757 01b0 FFF7FEFF 		bl	__aeabi_f2d
+ 758              	.LVL80:
+ 759 01b4 0646     		mov	r6, r0
+ 760 01b6 0F46     		mov	r7, r1
+ 179:Src/synchronous_rectifier.c **** 
+ 761              		.loc 1 179 69 view .LVU175
+ 762 01b8 404C     		ldr	r4, .L59+28
+ 763              	.LVL81:
+ 179:Src/synchronous_rectifier.c **** 
+ 764              		.loc 1 179 69 view .LVU176
+ 765 01ba 2068     		ldr	r0, [r4]	@ float
+ 766 01bc FFF7FEFF 		bl	__aeabi_f2d
+ 767              	.LVL82:
+ 768 01c0 37A3     		adr	r3, .L59
+ 769 01c2 D3E90023 		ldrd	r2, [r3]
+ 770 01c6 FFF7FEFF 		bl	__aeabi_dmul
+ 771              	.LVL83:
+ 178:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 772              		.loc 1 178 93 view .LVU177
+ 773 01ca 0246     		mov	r2, r0
+ 774 01cc 0B46     		mov	r3, r1
+ 775 01ce 3046     		mov	r0, r6
+ 776 01d0 3946     		mov	r1, r7
+ 777 01d2 FFF7FEFF 		bl	__aeabi_dadd
+ 778              	.LVL84:
+ 779 01d6 FFF7FEFF 		bl	__aeabi_d2f
+ 780              	.LVL85:
+ 178:Src/synchronous_rectifier.c ****                                          MeanZeroCrossingPeriodInUs * (1.0 - ZERO_CROSSING_PERIOD_E
+ 781              		.loc 1 178 40 view .LVU178
+ 782 01da 2060     		str	r0, [r4]	@ float
+ 181:Src/synchronous_rectifier.c ****             {
+ 783              		.loc 1 181 13 is_stmt 1 view .LVU179
+ 181:Src/synchronous_rectifier.c ****             {
+ 784              		.loc 1 181 34 is_stmt 0 view .LVU180
+ 785 01dc 384B     		ldr	r3, .L59+32
+ 786 01de 1968     		ldr	r1, [r3]	@ float
+ 181:Src/synchronous_rectifier.c ****             {
+ 787              		.loc 1 181 16 view .LVU181
+ 788 01e0 384B     		ldr	r3, .L59+36
+ 789 01e2 1868     		ldr	r0, [r3]	@ float
+ARM GAS  /tmp/cclH5Ofm.s 			page 20
+
+
+ 790 01e4 FFF7FEFF 		bl	__aeabi_fcmpgt
+ 791              	.LVL86:
+ 792 01e8 58B1     		cbz	r0, .L38
+ 183:Src/synchronous_rectifier.c ****             }
+ 793              		.loc 1 183 17 is_stmt 1 view .LVU182
+ 183:Src/synchronous_rectifier.c ****             }
+ 794              		.loc 1 183 38 is_stmt 0 view .LVU183
+ 795 01ea 0398     		ldr	r0, [sp, #12]	@ float
+ 796 01ec 364B     		ldr	r3, .L59+40
+ 797 01ee 1968     		ldr	r1, [r3]	@ float
+ 798 01f0 FFF7FEFF 		bl	__aeabi_fmul
+ 799              	.LVL87:
+ 183:Src/synchronous_rectifier.c ****             }
+ 800              		.loc 1 183 23 view .LVU184
+ 801 01f4 324C     		ldr	r4, .L59+32
+ 802 01f6 2368     		ldr	r3, [r4]	@ float
+ 803 01f8 0146     		mov	r1, r0
+ 804 01fa 1846     		mov	r0, r3
+ 805 01fc FFF7FEFF 		bl	__aeabi_fadd
+ 806              	.LVL88:
+ 807 0200 2060     		str	r0, [r4]	@ float
+ 808              	.L38:
+ 186:Src/synchronous_rectifier.c **** 
+ 809              		.loc 1 186 13 is_stmt 1 view .LVU185
+ 186:Src/synchronous_rectifier.c **** 
+ 810              		.loc 1 186 25 is_stmt 0 view .LVU186
+ 811 0202 BDF80630 		ldrh	r3, [sp, #6]
+ 812 0206 9BB2     		uxth	r3, r3
+ 813 0208 294A     		ldr	r2, .L59+16
+ 814 020a 1380     		strh	r3, [r2]	@ movhi
+ 188:Src/synchronous_rectifier.c ****             {
+ 815              		.loc 1 188 13 is_stmt 1 view .LVU187
+ 188:Src/synchronous_rectifier.c ****             {
+ 816              		.loc 1 188 23 is_stmt 0 view .LVU188
+ 817 020c 2C4B     		ldr	r3, .L59+32
+ 818 020e 1868     		ldr	r0, [r3]	@ float
+ 188:Src/synchronous_rectifier.c ****             {
+ 819              		.loc 1 188 16 view .LVU189
+ 820 0210 2E49     		ldr	r1, .L59+44
+ 821 0212 FFF7FEFF 		bl	__aeabi_fcmplt
+ 822              	.LVL89:
+ 823 0216 0028     		cmp	r0, #0
+ 824 0218 36D0     		beq	.L49
+ 190:Src/synchronous_rectifier.c ****                 ToSetDrive0 = FALSE;
+ 825              		.loc 1 190 17 is_stmt 1 view .LVU190
+ 826 021a 0022     		movs	r2, #0
+ 827 021c 4FF40071 		mov	r1, #512
+ 828 0220 2B48     		ldr	r0, .L59+48
+ 829 0222 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 830              	.LVL90:
+ 191:Src/synchronous_rectifier.c ****                 ToSetDrive1 = TRUE;
+ 831              		.loc 1 191 17 view .LVU191
+ 191:Src/synchronous_rectifier.c ****                 ToSetDrive1 = TRUE;
+ 832              		.loc 1 191 29 is_stmt 0 view .LVU192
+ 833 0226 2B4B     		ldr	r3, .L59+52
+ 834 0228 0022     		movs	r2, #0
+ 835 022a 1A70     		strb	r2, [r3]
+ARM GAS  /tmp/cclH5Ofm.s 			page 21
+
+
+ 192:Src/synchronous_rectifier.c **** 
+ 836              		.loc 1 192 17 is_stmt 1 view .LVU193
+ 192:Src/synchronous_rectifier.c **** 
+ 837              		.loc 1 192 29 is_stmt 0 view .LVU194
+ 838 022c 2A4B     		ldr	r3, .L59+56
+ 839 022e 0122     		movs	r2, #1
+ 840 0230 1A70     		strb	r2, [r3]
+ 194:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim4);
+ 841              		.loc 1 194 17 is_stmt 1 view .LVU195
+ 194:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim4);
+ 842              		.loc 1 194 17 view .LVU196
+ 843 0232 234E     		ldr	r6, .L59+32
+ 844 0234 3168     		ldr	r1, [r6]	@ float
+ 845 0236 4FF07E50 		mov	r0, #1065353216
+ 846 023a FFF7FEFF 		bl	__aeabi_fsub
+ 847              	.LVL91:
+ 848 023e 1F4D     		ldr	r5, .L59+28
+ 849 0240 2968     		ldr	r1, [r5]	@ float
+ 850 0242 FFF7FEFF 		bl	__aeabi_fmul
+ 851              	.LVL92:
+ 852 0246 254C     		ldr	r4, .L59+60
+ 853 0248 2768     		ldr	r7, [r4]
+ 854 024a FFF7FEFF 		bl	__aeabi_f2uiz
+ 855              	.LVL93:
+ 856 024e 80B2     		uxth	r0, r0
+ 857 0250 F862     		str	r0, [r7, #44]
+ 194:Src/synchronous_rectifier.c ****                 HAL_TIM_Base_Start_IT(&htim4);
+ 858              		.loc 1 194 17 view .LVU197
+ 859 0252 3168     		ldr	r1, [r6]	@ float
+ 860 0254 4FF07E50 		mov	r0, #1065353216
+ 861 0258 FFF7FEFF 		bl	__aeabi_fsub
+ 862              	.LVL94:
+ 863 025c 2968     		ldr	r1, [r5]	@ float
+ 864 025e FFF7FEFF 		bl	__aeabi_fmul
+ 865              	.LVL95:
+ 866 0262 FFF7FEFF 		bl	__aeabi_f2uiz
+ 867              	.LVL96:
+ 868 0266 80B2     		uxth	r0, r0
+ 869 0268 E060     		str	r0, [r4, #12]
+ 195:Src/synchronous_rectifier.c ****                 __HAL_TIM_CLEAR_FLAG(&htim4, TIM_FLAG_UPDATE);
+ 870              		.loc 1 195 17 view .LVU198
+ 871 026a 2046     		mov	r0, r4
+ 872 026c FFF7FEFF 		bl	HAL_TIM_Base_Start_IT
+ 873              	.LVL97:
+ 196:Src/synchronous_rectifier.c ****             }
+ 874              		.loc 1 196 17 view .LVU199
+ 875 0270 2368     		ldr	r3, [r4]
+ 876 0272 6FF00102 		mvn	r2, #1
+ 877 0276 1A61     		str	r2, [r3, #16]
+ 878 0278 D1E6     		b	.L25
+ 879              	.LVL98:
+ 880              	.L58:
+ 176:Src/synchronous_rectifier.c **** 
+ 881              		.loc 1 176 17 view .LVU200
+ 176:Src/synchronous_rectifier.c **** 
+ 882              		.loc 1 176 28 is_stmt 0 view .LVU201
+ 883 027a 0398     		ldr	r0, [sp, #12]	@ float
+ARM GAS  /tmp/cclH5Ofm.s 			page 22
+
+
+ 884 027c 4FF08F41 		mov	r1, #1199570944
+ 885 0280 FFF7FEFF 		bl	__aeabi_fadd
+ 886              	.LVL99:
+ 887 0284 0390     		str	r0, [sp, #12]	@ float
+ 888 0286 8FE7     		b	.L36
+ 889              	.LVL100:
+ 890              	.L49:
+ 200:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 891              		.loc 1 200 17 is_stmt 1 view .LVU202
+ 200:Src/synchronous_rectifier.c ****                 ToSetDrive1 = FALSE;
+ 892              		.loc 1 200 29 is_stmt 0 view .LVU203
+ 893 0288 0023     		movs	r3, #0
+ 894 028a 124A     		ldr	r2, .L59+52
+ 895 028c 1370     		strb	r3, [r2]
+ 201:Src/synchronous_rectifier.c **** 
+ 896              		.loc 1 201 17 is_stmt 1 view .LVU204
+ 201:Src/synchronous_rectifier.c **** 
+ 897              		.loc 1 201 29 is_stmt 0 view .LVU205
+ 898 028e 124A     		ldr	r2, .L59+56
+ 899 0290 1370     		strb	r3, [r2]
+ 203:Src/synchronous_rectifier.c ****             }
+ 900              		.loc 1 203 17 is_stmt 1 view .LVU206
+ 901 0292 0122     		movs	r2, #1
+ 902 0294 4FF48071 		mov	r1, #256
+ 903 0298 0D48     		ldr	r0, .L59+48
+ 904 029a FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 905              	.LVL101:
+ 906 029e BEE6     		b	.L25
+ 907              	.L60:
+ 908              		.align	3
+ 909              	.L59:
+ 910 02a0 0000007B 		.word	2063597568
+ 911 02a4 14AEEF3F 		.word	1072672276
+ 912 02a8 00000000 		.word	htim3
+ 913 02ac 00000000 		.word	.LANCHOR7
+ 914 02b0 00000000 		.word	.LANCHOR4
+ 915 02b4 00000000 		.word	htim2
+ 916 02b8 0AD7233C 		.word	1008981770
+ 917 02bc 00000000 		.word	.LANCHOR3
+ 918 02c0 00000000 		.word	.LANCHOR0
+ 919 02c4 00000000 		.word	.LANCHOR1
+ 920 02c8 00000000 		.word	.LANCHOR2
+ 921 02cc 9A99193F 		.word	1058642330
+ 922 02d0 000C0140 		.word	1073810432
+ 923 02d4 00000000 		.word	.LANCHOR5
+ 924 02d8 00000000 		.word	.LANCHOR6
+ 925 02dc 00000000 		.word	htim4
+ 926              	.LBE4:
+ 927              		.cfi_endproc
+ 928              	.LFE69:
+ 930              		.section	.text.HAL_TIM_PeriodElapsedCallback,"ax",%progbits
+ 931              		.align	1
+ 932              		.global	HAL_TIM_PeriodElapsedCallback
+ 933              		.syntax unified
+ 934              		.thumb
+ 935              		.thumb_func
+ 936              		.fpu softvfp
+ARM GAS  /tmp/cclH5Ofm.s 			page 23
+
+
+ 938              	HAL_TIM_PeriodElapsedCallback:
+ 939              	.LVL102:
+ 940              	.LFB70:
+ 208:Src/synchronous_rectifier.c **** 
+ 209:Src/synchronous_rectifier.c **** void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+ 210:Src/synchronous_rectifier.c **** {
+ 941              		.loc 1 210 1 view -0
+ 942              		.cfi_startproc
+ 943              		@ args = 0, pretend = 0, frame = 0
+ 944              		@ frame_needed = 0, uses_anonymous_args = 0
+ 945              		.loc 1 210 1 is_stmt 0 view .LVU208
+ 946 0000 10B5     		push	{r4, lr}
+ 947              	.LCFI7:
+ 948              		.cfi_def_cfa_offset 8
+ 949              		.cfi_offset 4, -8
+ 950              		.cfi_offset 14, -4
+ 951 0002 0446     		mov	r4, r0
+ 211:Src/synchronous_rectifier.c ****     if (htim == &htim2)
+ 952              		.loc 1 211 5 is_stmt 1 view .LVU209
+ 953              		.loc 1 211 8 is_stmt 0 view .LVU210
+ 954 0004 114B     		ldr	r3, .L67
+ 955 0006 9842     		cmp	r0, r3
+ 956 0008 03D0     		beq	.L65
+ 957              	.LVL103:
+ 958              	.L62:
+ 212:Src/synchronous_rectifier.c ****     {
+ 213:Src/synchronous_rectifier.c ****         if (ToSetDrive0)
+ 214:Src/synchronous_rectifier.c ****         {
+ 215:Src/synchronous_rectifier.c ****             ToSetDrive0 = FALSE;
+ 216:Src/synchronous_rectifier.c ****             HAL_GPIO_WritePin(THYRISTOR0_DRIVE_GPIO_Port, THYRISTOR0_DRIVE_Pin, GPIO_PIN_SET);
+ 217:Src/synchronous_rectifier.c ****         }
+ 218:Src/synchronous_rectifier.c ****     }
+ 219:Src/synchronous_rectifier.c **** 
+ 220:Src/synchronous_rectifier.c ****     if (htim == &htim4)
+ 959              		.loc 1 220 5 is_stmt 1 view .LVU211
+ 960              		.loc 1 220 8 is_stmt 0 view .LVU212
+ 961 000a 114B     		ldr	r3, .L67+4
+ 962 000c 9C42     		cmp	r4, r3
+ 963 000e 0ED0     		beq	.L66
+ 964              	.L61:
+ 221:Src/synchronous_rectifier.c ****     {
+ 222:Src/synchronous_rectifier.c ****         if (ToSetDrive1)
+ 223:Src/synchronous_rectifier.c ****         {
+ 224:Src/synchronous_rectifier.c ****             ToSetDrive1 = FALSE;
+ 225:Src/synchronous_rectifier.c ****             HAL_GPIO_WritePin(THYRISTOR1_DRIVE_GPIO_Port, THYRISTOR1_DRIVE_Pin, GPIO_PIN_SET);
+ 226:Src/synchronous_rectifier.c ****         }
+ 227:Src/synchronous_rectifier.c ****     }
+ 228:Src/synchronous_rectifier.c **** }...
+ 965              		.loc 1 228 1 view .LVU213
+ 966 0010 10BD     		pop	{r4, pc}
+ 967              	.LVL104:
+ 968              	.L65:
+ 213:Src/synchronous_rectifier.c ****         if (ToSetDrive0)
+ 969              		.loc 1 213 9 is_stmt 1 view .LVU214
+ 213:Src/synchronous_rectifier.c ****         if (ToSetDrive0)
+ 970              		.loc 1 213 13 is_stmt 0 view .LVU215
+ 971 0012 104B     		ldr	r3, .L67+8
+ARM GAS  /tmp/cclH5Ofm.s 			page 24
+
+
+ 972 0014 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 213:Src/synchronous_rectifier.c ****         if (ToSetDrive0)
+ 973              		.loc 1 213 12 view .LVU216
+ 974 0016 002B     		cmp	r3, #0
+ 975 0018 F7D0     		beq	.L62
+ 215:Src/synchronous_rectifier.c ****             ToSetDrive0 = FALSE;
+ 976              		.loc 1 215 13 is_stmt 1 view .LVU217
+ 215:Src/synchronous_rectifier.c ****             ToSetDrive0 = FALSE;
+ 977              		.loc 1 215 25 is_stmt 0 view .LVU218
+ 978 001a 0E4B     		ldr	r3, .L67+8
+ 979 001c 0022     		movs	r2, #0
+ 980 001e 1A70     		strb	r2, [r3]
+ 216:Src/synchronous_rectifier.c ****             HAL_GPIO_WritePin(THYRISTOR0_DRIVE_GPIO_Port, THYRISTOR0_DRIVE_Pin, GPIO_PIN_SET);
+ 981              		.loc 1 216 13 is_stmt 1 view .LVU219
+ 982 0020 0122     		movs	r2, #1
+ 983 0022 4FF40071 		mov	r1, #512
+ 984 0026 0C48     		ldr	r0, .L67+12
+ 985              	.LVL105:
+ 216:Src/synchronous_rectifier.c ****             HAL_GPIO_WritePin(THYRISTOR0_DRIVE_GPIO_Port, THYRISTOR0_DRIVE_Pin, GPIO_PIN_SET);
+ 986              		.loc 1 216 13 is_stmt 0 view .LVU220
+ 987 0028 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 988              	.LVL106:
+ 989 002c EDE7     		b	.L62
+ 990              	.L66:
+ 222:Src/synchronous_rectifier.c ****         if (ToSetDrive1)
+ 991              		.loc 1 222 9 is_stmt 1 view .LVU221
+ 222:Src/synchronous_rectifier.c ****         if (ToSetDrive1)
+ 992              		.loc 1 222 13 is_stmt 0 view .LVU222
+ 993 002e 0B4B     		ldr	r3, .L67+16
+ 994 0030 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 222:Src/synchronous_rectifier.c ****         if (ToSetDrive1)
+ 995              		.loc 1 222 12 view .LVU223
+ 996 0032 002B     		cmp	r3, #0
+ 997 0034 ECD0     		beq	.L61
+ 224:Src/synchronous_rectifier.c ****             ToSetDrive1 = FALSE;
+ 998              		.loc 1 224 13 is_stmt 1 view .LVU224
+ 224:Src/synchronous_rectifier.c ****             ToSetDrive1 = FALSE;
+ 999              		.loc 1 224 25 is_stmt 0 view .LVU225
+ 1000 0036 094B     		ldr	r3, .L67+16
+ 1001 0038 0022     		movs	r2, #0
+ 1002 003a 1A70     		strb	r2, [r3]
+ 225:Src/synchronous_rectifier.c ****             HAL_GPIO_WritePin(THYRISTOR1_DRIVE_GPIO_Port, THYRISTOR1_DRIVE_Pin, GPIO_PIN_SET);
+ 1003              		.loc 1 225 13 is_stmt 1 view .LVU226
+ 1004 003c 0122     		movs	r2, #1
+ 1005 003e 4FF48071 		mov	r1, #256
+ 1006 0042 0548     		ldr	r0, .L67+12
+ 1007 0044 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 1008              	.LVL107:
+ 1009              		.loc 1 228 1 is_stmt 0 view .LVU227
+ 1010 0048 E2E7     		b	.L61
+ 1011              	.L68:
+ 1012 004a 00BF     		.align	2
+ 1013              	.L67:
+ 1014 004c 00000000 		.word	htim2
+ 1015 0050 00000000 		.word	htim4
+ 1016 0054 00000000 		.word	.LANCHOR5
+ 1017 0058 000C0140 		.word	1073810432
+ARM GAS  /tmp/cclH5Ofm.s 			page 25
+
+
+ 1018 005c 00000000 		.word	.LANCHOR6
+ 1019              		.cfi_endproc
+ 1020              	.LFE70:
+ 1022              		.section	.bss.Alpha,"aw",%nobits
+ 1023              		.align	2
+ 1024              		.set	.LANCHOR0,. + 0
+ 1027              	Alpha:
+ 1028 0000 00000000 		.space	4
+ 1029              		.section	.bss.AlphaDestination,"aw",%nobits
+ 1030              		.align	2
+ 1031              		.set	.LANCHOR1,. + 0
+ 1034              	AlphaDestination:
+ 1035 0000 00000000 		.space	4
+ 1036              		.section	.bss.AlphaSlewRate,"aw",%nobits
+ 1037              		.align	2
+ 1038              		.set	.LANCHOR2,. + 0
+ 1041              	AlphaSlewRate:
+ 1042 0000 00000000 		.space	4
+ 1043              		.section	.bss.LastCapture,"aw",%nobits
+ 1044              		.align	1
+ 1045              		.set	.LANCHOR4,. + 0
+ 1048              	LastCapture:
+ 1049 0000 0000     		.space	2
+ 1050              		.section	.bss.MeanZeroCrossingPeriodInUs,"aw",%nobits
+ 1051              		.align	2
+ 1052              		.set	.LANCHOR3,. + 0
+ 1055              	MeanZeroCrossingPeriodInUs:
+ 1056 0000 00000000 		.space	4
+ 1057              		.section	.bss.PhaseLocked,"aw",%nobits
+ 1058              		.set	.LANCHOR7,. + 0
+ 1061              	PhaseLocked:
+ 1062 0000 00       		.space	1
+ 1063              		.section	.bss.ToSetDrive0,"aw",%nobits
+ 1064              		.set	.LANCHOR5,. + 0
+ 1067              	ToSetDrive0:
+ 1068 0000 00       		.space	1
+ 1069              		.section	.bss.ToSetDrive1,"aw",%nobits
+ 1070              		.set	.LANCHOR6,. + 0
+ 1073              	ToSetDrive1:
+ 1074 0000 00       		.space	1
+ 1075              		.text
+ 1076              	.Letext0:
+ 1077              		.file 2 "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/arm-none-eabi/include/machine
+ 1078              		.file 3 "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/arm-none-eabi/include/sys/_st
+ 1079              		.file 4 "Drivers/CMSIS/Include/core_cm3.h"
+ 1080              		.file 5 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/system_stm32f1xx.h"
+ 1081              		.file 6 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h"
+ 1082              		.file 7 "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/arm-none-eabi/include/sys/loc
+ 1083              		.file 8 "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/arm-none-eabi/include/sys/_ty
+ 1084              		.file 9 "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/lib/gcc/arm-none-eabi/8.2.1/i
+ 1085              		.file 10 "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/arm-none-eabi/include/sys/re
+ 1086              		.file 11 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 1087              		.file 12 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 1088              		.file 13 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 1089              		.file 14 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h"
+ 1090              		.file 15 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ 1091              		.file 16 "Inc/global.h"
+ARM GAS  /tmp/cclH5Ofm.s 			page 26
+
+
+ 1092              		.file 17 "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/arm-none-eabi/include/math.h
+ARM GAS  /tmp/cclH5Ofm.s 			page 27
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 synchronous_rectifier.c
+     /tmp/cclH5Ofm.s:16     .text.Sr_Start:0000000000000000 $t
+     /tmp/cclH5Ofm.s:24     .text.Sr_Start:0000000000000000 Sr_Start
+     /tmp/cclH5Ofm.s:108    .text.Sr_Start:0000000000000064 $d
+     /tmp/cclH5Ofm.s:124    .text.Sr_Stop:0000000000000000 $t
+     /tmp/cclH5Ofm.s:131    .text.Sr_Stop:0000000000000000 Sr_Stop
+     /tmp/cclH5Ofm.s:158    .text.Sr_Stop:0000000000000018 $d
+     /tmp/cclH5Ofm.s:172    .text.Sr_SetVoltage:0000000000000000 $t
+     /tmp/cclH5Ofm.s:179    .text.Sr_SetVoltage:0000000000000000 Sr_SetVoltage
+     /tmp/cclH5Ofm.s:393    .text.Sr_SetVoltage:0000000000000110 $d
+     /tmp/cclH5Ofm.s:414    .text.HAL_TIM_IC_CaptureCallback:0000000000000000 $t
+     /tmp/cclH5Ofm.s:421    .text.HAL_TIM_IC_CaptureCallback:0000000000000000 HAL_TIM_IC_CaptureCallback
+     /tmp/cclH5Ofm.s:910    .text.HAL_TIM_IC_CaptureCallback:00000000000002a0 $d
+     /tmp/cclH5Ofm.s:931    .text.HAL_TIM_PeriodElapsedCallback:0000000000000000 $t
+     /tmp/cclH5Ofm.s:938    .text.HAL_TIM_PeriodElapsedCallback:0000000000000000 HAL_TIM_PeriodElapsedCallback
+     /tmp/cclH5Ofm.s:1014   .text.HAL_TIM_PeriodElapsedCallback:000000000000004c $d
+     /tmp/cclH5Ofm.s:1023   .bss.Alpha:0000000000000000 $d
+     /tmp/cclH5Ofm.s:1027   .bss.Alpha:0000000000000000 Alpha
+     /tmp/cclH5Ofm.s:1030   .bss.AlphaDestination:0000000000000000 $d
+     /tmp/cclH5Ofm.s:1034   .bss.AlphaDestination:0000000000000000 AlphaDestination
+     /tmp/cclH5Ofm.s:1037   .bss.AlphaSlewRate:0000000000000000 $d
+     /tmp/cclH5Ofm.s:1041   .bss.AlphaSlewRate:0000000000000000 AlphaSlewRate
+     /tmp/cclH5Ofm.s:1044   .bss.LastCapture:0000000000000000 $d
+     /tmp/cclH5Ofm.s:1048   .bss.LastCapture:0000000000000000 LastCapture
+     /tmp/cclH5Ofm.s:1051   .bss.MeanZeroCrossingPeriodInUs:0000000000000000 $d
+     /tmp/cclH5Ofm.s:1055   .bss.MeanZeroCrossingPeriodInUs:0000000000000000 MeanZeroCrossingPeriodInUs
+     /tmp/cclH5Ofm.s:1061   .bss.PhaseLocked:0000000000000000 PhaseLocked
+     /tmp/cclH5Ofm.s:1062   .bss.PhaseLocked:0000000000000000 $d
+     /tmp/cclH5Ofm.s:1067   .bss.ToSetDrive0:0000000000000000 ToSetDrive0
+     /tmp/cclH5Ofm.s:1068   .bss.ToSetDrive0:0000000000000000 $d
+     /tmp/cclH5Ofm.s:1073   .bss.ToSetDrive1:0000000000000000 ToSetDrive1
+     /tmp/cclH5Ofm.s:1074   .bss.ToSetDrive1:0000000000000000 $d
+
+UNDEFINED SYMBOLS
+HAL_GPIO_WritePin
+HAL_TIM_IC_Start_IT
+htim3
+HAL_TIM_IC_Stop_IT
+__aeabi_fcmpge
+__aeabi_f2d
+__aeabi_dmul
+__aeabi_d2f
+__aeabi_fcmple
+__aeabi_fmul
+__aeabi_fsub
+__aeabi_ddiv
+__aeabi_fcmpgt
+sinf
+asinf
+__aeabi_i2f
+__aeabi_fcmplt
+__aeabi_fadd
+__aeabi_dadd
+__aeabi_f2uiz
+HAL_TIM_Base_Stop_IT
+HAL_TIM_Base_Start_IT
+ARM GAS  /tmp/cclH5Ofm.s 			page 28
+
+
+htim2
+htim4

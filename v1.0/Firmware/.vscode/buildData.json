@@ -3,12 +3,14 @@
     "ABOUT2": "User should not edit this fields, instead it should edit 'c_cpp_properties.json'",
     "ABOUT3": "This file is regenerated on 'Update workspace' task.",
     "VERSION": "1.7",
-    "LAST_RUN": "2020-05-18 02:30:00.415497",
+    "LAST_RUN": "2020-06-10 03:36:55.418261",
     "cSources": [
         "Src/main.c",
         "Src/stm32f1xx_it.c",
         "Src/stm32f1xx_hal_msp.c",
         "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c",
+        "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc.c",
+        "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.c",
         "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c",
         "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c",
         "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c",
@@ -20,8 +22,7 @@
         "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_pwr.c",
         "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c",
         "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c",
-        "Src/system_stm32f1xx.c",
-        "Src/synchronous_rectifier.c"
+        "Src/system_stm32f1xx.c"
     ],
     "asmSources": [],
     "ldSources": [
@@ -34,24 +35,26 @@
         "Drivers/STM32F1xx_HAL_Driver/Inc",
         "Drivers/STM32F1xx_HAL_Driver/Inc/Legacy",
         "Drivers/CMSIS/Device/ST/STM32F1xx/Include",
+        "Drivers/CMSIS/Include",
         "Drivers/CMSIS/Include"
     ],
     "asmIncludes": [],
     "ldIncludes": [],
     "cDefines": [
-        "STM32F103xB",
-        "USE_HAL_DRIVER"
+        "USE_HAL_DRIVER",
+        "STM32F103xB"
     ],
     "asmDefines": [],
     "cFlags": [
         "-mcpu=cortex-m3",
         "-mthumb",
-        "-DSTM32F103xB",
         "-DUSE_HAL_DRIVER",
+        "-DSTM32F103xB",
         "-IInc",
         "-IDrivers/STM32F1xx_HAL_Driver/Inc",
         "-IDrivers/STM32F1xx_HAL_Driver/Inc/Legacy",
         "-IDrivers/CMSIS/Device/ST/STM32F1xx/Include",
+        "-IDrivers/CMSIS/Include",
         "-IDrivers/CMSIS/Include",
         "-Og",
         "-Wall",
@@ -79,12 +82,12 @@
         "-lc",
         "-lm",
         "-lnosys",
-        "-Wl,-Map=build/WaveUltrasonics.map,--cref",
+        "-Wl,-Map=build/Firmware.map,--cref",
         "-Wl,--gc-sections"
     ],
     "buildDir": "build",
-    "targetExecutablePath": "build/WaveUltrasonics.elf",
-    "cubeMxProjectPath": "WaveUltrasonics.ioc",
+    "targetExecutablePath": "build/Firmware.elf",
+    "cubeMxProjectPath": "Firmware.ioc",
     "openOcdConfig": [
         ".vscode/stm32f1x.cfg"
     ],

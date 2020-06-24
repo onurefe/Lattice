@@ -1,26 +1,43 @@
 #include "piezo_driver.h"
 
-#define FREQ_SWEEP_RATE_PER_SEC 100.0f
-#define SWEEP_START_FREQ 25000.0f
-
 /* Private functions -------------------------------------------------------*/
 static void startPwm(void);
 static void stopPwm(void);
-static void setReload(float frequency);
+static void setTIMRegisters(uint32_t period);
 
 /* Imported variables ------------------------------------------------------*/
 extern TIM_HandleTypeDef htim1;
 
 /* Private variables -------------------------------------------------------*/
 static Bool_t HBridgeEnabled = FALSE;
-static float Frequency = DEFAULT_PWM_FREQ;
+static uint32_t Period = (TIM2_CLOCK_FREQ / DEFAULT_PWM_FREQ);
 
 /* Exported functions ------------------------------------------------------*/
+void Pd_SetFrequency(float frequency)
+{
+    Period = (uint32_t)(TIM2_CLOCK_FREQ / frequency + 0.5f);
+
+    if (HBridgeEnabled)
+    {
+        setTIMRegisters(Period);
+    }
+}
+
+void Pd_SetPeriod(uint32_t period)
+{
+    Period = period;
+
+    if (HBridgeEnabled)
+    {
+        setTIMRegisters(period);
+    }
+}
+
 void Pd_CmdSignalGeneration(Bool_t enabled)
 {
     if (enabled && !HBridgeEnabled)
     {
-        setReload(Frequency);
+        setTIMRegisters(Period);
         startPwm();
         HBridgeEnabled = TRUE;
     }
@@ -50,13 +67,10 @@ void stopPwm(void)
     HAL_TIMEx_PWMN_Stop_IT(&htim1, TIM_CHANNEL_2);
 }
 
-void setReload(float frequency)
+void setTIMRegisters(uint32_t period)
 {
-    uint16_t reload;
-    reload = ((uint16_t)(((float)TIM1_CLOCK_FREQ) / frequency + 0.5f)) - 1;
-
     // Set compare and reload values.
-    __HAL_TIM_SET_AUTORELOAD(&htim1, reload);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, (reload + 1) >> 1);
-    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, (reload + 1) >> 1);
+    __HAL_TIM_SET_AUTORELOAD(&htim1, period - 1);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, period >> 1);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, period >> 1);
 }

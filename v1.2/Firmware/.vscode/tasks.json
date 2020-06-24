@@ -1,0 +1,202 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build project",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "type": "shell",
+            "command": "/usr/bin/make",
+            "args": [
+                "GCC_PATH=/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/bin",
+                "-j3"
+            ],
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            },
+            "presentation": {
+                "focus": true
+            }
+        },
+        {
+            "label": "Compile current file",
+            "type": "shell",
+            "command": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-gcc",
+            "args": [
+                "-c",
+                "-DSTM32F103xB",
+                "-DUSE_HAL_DRIVER",
+                "-IInc",
+                "-IDrivers/STM32F1xx_HAL_Driver/Inc",
+                "-IDrivers/STM32F1xx_HAL_Driver/Inc/Legacy",
+                "-IDrivers/CMSIS/Device/ST/STM32F1xx/Include",
+                "-IDrivers/CMSIS/Include",
+                "-mcpu=cortex-m3",
+                "-mthumb",
+                "-DSTM32F103xB",
+                "-DUSE_HAL_DRIVER",
+                "-IInc",
+                "-IDrivers/STM32F1xx_HAL_Driver/Inc",
+                "-IDrivers/STM32F1xx_HAL_Driver/Inc/Legacy",
+                "-IDrivers/CMSIS/Device/ST/STM32F1xx/Include",
+                "-IDrivers/CMSIS/Include",
+                "-Og",
+                "-Wall",
+                "-fdata-sections",
+                "-ffunction-sections",
+                "-g",
+                "-gdwarf-2",
+                "-MMD",
+                "-MP",
+                "-MF'build/${fileBasenameNoExtension}.d'",
+                "'${relativeFile}'",
+                "-o",
+                "'build/${fileBasenameNoExtension}.o'"
+            ],
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            },
+            "presentation": {
+                "focus": true
+            }
+        },
+        {
+            "label": "Delete build folder",
+            "type": "shell",
+            "command": "/usr/bin/make",
+            "args": [
+                "clean"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "focus": false
+            }
+        },
+        {
+            "label": "CPU: Build, Download and run",
+            "type": "shell",
+            "command": "/home/onur/STM32Toolchain/openocd/.content/bin/openocd",
+            "args": [
+                "-f",
+                "/home/onur/STM32Toolchain/openocd/.content/scripts/interface/stlink.cfg",
+                "-f",
+                ".vscode/openocd",
+                "-c",
+                "program build/WaveUltrasonics.elf verify reset exit"
+            ],
+            "problemMatcher": [],
+            "dependsOn": "Build project"
+        },
+        {
+            "label": "CPU: Download and run",
+            "type": "shell",
+            "command": "/home/onur/STM32Toolchain/openocd/.content/bin/openocd",
+            "args": [
+                "-f",
+                "/home/onur/STM32Toolchain/openocd/.content/scripts/interface/stlink.cfg",
+                "-f",
+                ".vscode/openocd",
+                "-c",
+                "program build/WaveUltrasonics.elf verify reset exit"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CPU: Reset and run",
+            "type": "shell",
+            "command": "/home/onur/STM32Toolchain/openocd/.content/bin/openocd",
+            "args": [
+                "-f",
+                "/home/onur/STM32Toolchain/openocd/.content/scripts/interface/stlink.cfg",
+                "-f",
+                ".vscode/openocd",
+                "-c init",
+                "-c reset",
+                "-c exit"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CPU: Halt",
+            "type": "shell",
+            "command": "/home/onur/STM32Toolchain/openocd/.content/bin/openocd",
+            "args": [
+                "-f",
+                "/home/onur/STM32Toolchain/openocd/.content/scripts/interface/stlink.cfg",
+                "-f",
+                ".vscode/openocd",
+                "-c init",
+                "-c halt",
+                "-c exit"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CPU: Run",
+            "type": "shell",
+            "command": "/home/onur/STM32Toolchain/openocd/.content/bin/openocd",
+            "args": [
+                "-f",
+                "/home/onur/STM32Toolchain/openocd/.content/scripts/interface/stlink.cfg",
+                "-f",
+                ".vscode/openocd",
+                "-c init",
+                "-c resume",
+                "-c exit"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Python file",
+            "type": "shell",
+            "command": "python3",
+            "args": [
+                "${file}"
+            ],
+            "presentation": {
+                "focus": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Open CubeMX project",
+            "type": "shell",
+            "command": "xdg-open",
+            "args": [
+                "Firmware.ioc"
+            ],
+            "presentation": {
+                "focus": false
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Update workspace",
+            "type": "shell",
+            "command": "python3",
+            "args": [
+                "${workspaceFolder}/ideScripts/update.py"
+            ],
+            "presentation": {
+                "focus": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}

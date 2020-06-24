@@ -1,4 +1,4 @@
-update=Pzt 08 Haz 2020 02:35:18 +03
+update=Paz 21 Haz 2020 13:06:16 +03
 version=1
 last_client=kicad
 [general]
@@ -20,15 +20,6 @@ version=1
 version=1
 [PcbFrame]
 version=1
-[sheetnames]
-1=03722038-cac7-4e19-aaf6-2b3c4ab528e3:
-2=7bd4d8d0-8b0b-4f2e-8ff1-fd0084603fae:IsensAfe
-3=656d525e-071c-4a84-baad-158886a80ed7:Misc
-4=a2b05a69-f893-4577-b497-d38f866418a6:SynchronousRectifier
-5=bea4f666-4cac-4da2-8ec8-6b7f68404c4c:Mcu
-6=979916f3-7626-4752-a997-62533ead75b3:HBridge
-7=2e0f5c7d-7faa-48fc-991b-69bf8fb5d03f:PowerSources
-8=ebf2dd12-e089-44bf-8e46-b435108f9172:ZeroCrossingDetector
 [pcbnew]
 version=1
 PageLayoutDescrFile=
@@ -271,9 +262,9 @@ dPairViaGap=0.25
 [pcbnew/Netclasses/1]
 Name=Gnd
 Clearance=0.2
-TrackWidth=0.6
+TrackWidth=0.5
 ViaDiameter=1.2
-ViaDrill=0.9
+ViaDrill=0.8
 uViaDiameter=0.3
 uViaDrill=0.1
 dPairWidth=0.2
@@ -293,8 +284,8 @@ dPairViaGap=0.25
 [pcbnew/Netclasses/3]
 Name=Low Power
 Clearance=0.2
-TrackWidth=0.6
-ViaDiameter=1.25
+TrackWidth=0.5
+ViaDiameter=1.2
 ViaDrill=0.8
 uViaDiameter=0.3
 uViaDrill=0.1
@@ -304,11 +295,20 @@ dPairViaGap=0.25
 [pcbnew/Netclasses/4]
 Name=Mid Power
 Clearance=0.2
-TrackWidth=0.85
-ViaDiameter=1.4
-ViaDrill=1
+TrackWidth=0.75
+ViaDiameter=1.8
+ViaDrill=1.2
 uViaDiameter=0.3
 uViaDrill=0.1
 dPairWidth=0.2
 dPairGap=0.25
 dPairViaGap=0.25
+[sheetnames]
+1=4bcba388-a830-4f53-84d5-f5ae6e614b1f:
+2=7bd4d8d0-8b0b-4f2e-8ff1-fd0084603fae:IsensAfe
+3=656d525e-071c-4a84-baad-158886a80ed7:Misc
+4=a2b05a69-f893-4577-b497-d38f866418a6:SynchronousRectifier
+5=bea4f666-4cac-4da2-8ec8-6b7f68404c4c:Mcu
+6=979916f3-7626-4752-a997-62533ead75b3:HBridge
+7=2e0f5c7d-7faa-48fc-991b-69bf8fb5d03f:PowerSources
+8=ebf2dd12-e089-44bf-8e46-b435108f9172:ZeroCrossingDetector

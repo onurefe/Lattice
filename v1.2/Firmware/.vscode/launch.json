@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "build/WaveUltrasonics.elf",
+            "svdFile": ".vscode/STM32F103xx.svd",
+            "configFiles": [
+                "/home/onur/STM32Toolchain/openocd/.content/scripts/interface/stlink.cfg",
+                ".vscode/openocd"
+            ],
+            "preLaunchTask": "Build project"
+        },
+        {
+            "name": "Debug current Python file",
+            "type": "python",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        }
+    ]
+}

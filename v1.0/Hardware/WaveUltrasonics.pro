@@ -1,4 +1,4 @@
-update=Cts 06 Haz 2020 05:04:46 +03
+update=Cts 13 Haz 2020 02:41:30 +03
 version=1
 last_client=kicad
 [general]
@@ -14,9 +14,9 @@ LibDir=
 [eeschema/libraries]
 [LibeditFrame]
 version=1
-[ModEditFrame]
-version=1
 [PcbFrame]
+version=1
+[ModEditFrame]
 version=1
 [pcbnew]
 version=1
@@ -78,7 +78,7 @@ DimensionPrecision=1
 SolderMaskClearance=0.05
 SolderMaskMinWidth=0
 SolderPasteClearance=0
-SolderPasteRatio=-0
+SolderPasteRatio=0
 [pcbnew/Layer.F.Cu]
 Name=F.Cu
 Type=0
@@ -304,7 +304,7 @@ dPairViaGap=0.25
 [SchematicFrame]
 version=1
 [sheetnames]
-1=91b9e9a3-9feb-44c8-b931-713aedbdd3d0:
+1=17236455-7742-4dea-be09-20847e713380:
 2=7bd4d8d0-8b0b-4f2e-8ff1-fd0084603fae:IsensAfe
 3=a2b05a69-f893-4577-b497-d38f866418a6:SynchronousRectifier
 4=bea4f666-4cac-4da2-8ec8-6b7f68404c4c:Mcu

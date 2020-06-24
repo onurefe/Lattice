@@ -5,7 +5,7 @@
       "Application": "Pcbnew",
       "Version": "5.99.0-unknown-1f9723c~101~ubuntu18.04.1"
     },
-    "CreationDate": "2020-06-08T02:15:51+03:00"
+    "CreationDate": "2020-06-20T02:36:48+03:00"
   },
   "GeneralSpecs": {
     "ProjectId": {
@@ -14,7 +14,7 @@
       "Revision": "rev?"
     },
     "Size": {
-      "X": 300.05,
+      "X": 262.05,
       "Y": 155.05
     },
     "LayerNumber": 2,

@@ -18,6 +18,8 @@
             "Src/stm32f1xx_it.c",
             "Src/stm32f1xx_hal_msp.c",
             "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c",
+            "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc.c",
+            "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_adc_ex.c",
             "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim.c",
             "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_tim_ex.c",
             "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal.c",
@@ -30,7 +32,6 @@
             "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash.c",
             "Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_flash_ex.c",
             "Src/system_stm32f1xx.c",
-            "Src/synchronous_rectifier.c",
             "startup_stm32f103xb.s"
         ],
         "cubemx_includes": [
@@ -38,18 +39,19 @@
             "Drivers/STM32F1xx_HAL_Driver/Inc",
             "Drivers/STM32F1xx_HAL_Driver/Inc/Legacy",
             "Drivers/CMSIS/Device/ST/STM32F1xx/Include",
+            "Drivers/CMSIS/Include",
             "Drivers/CMSIS/Include"
         ],
         "cubemx_defines": [
-            "STM32F103xB",
-            "USE_HAL_DRIVER"
+            "USE_HAL_DRIVER",
+            "STM32F103xB"
         ],
         "gccExePath": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-gcc",
         "gccIncludePath": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/lib/gcc/arm-none-eabi/8.2.1/include"
     },
     "configurations": [
         {
-            "name": "waveultrasonics",
+            "name": "lattice",
             "intelliSenseMode": "msvc-x64",
             "includePath": [
                 "${workspaceFolder}",
