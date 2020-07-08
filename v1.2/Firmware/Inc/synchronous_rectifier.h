@@ -7,5 +7,6 @@
 extern void Sr_Start(void);
 extern void Sr_Stop(void);
 extern void Sr_SetVoltage(float normalizedVoltage);
+extern Bool_t Sr_IsStabilized(void);
 
 #endif

@@ -1,4 +1,4 @@
-update=Çrş 24 Haz 2020 04:42:25 +03
+update=Çrş 24 Haz 2020 15:00:13 +03
 version=1
 last_client=kicad
 [general]
@@ -20,15 +20,6 @@ version=1
 version=1
 [SchematicFrame]
 version=1
-[sheetnames]
-1=d57fcfd1-6f40-45ea-8107-61d4b15d82a3:
-2=7bd4d8d0-8b0b-4f2e-8ff1-fd0084603fae:Afe
-3=656d525e-071c-4a84-baad-158886a80ed7:Misc
-4=a2b05a69-f893-4577-b497-d38f866418a6:SynchronousRectifier
-5=bea4f666-4cac-4da2-8ec8-6b7f68404c4c:Mcu
-6=979916f3-7626-4752-a997-62533ead75b3:HBridge
-7=2e0f5c7d-7faa-48fc-991b-69bf8fb5d03f:PowerSources
-8=ebf2dd12-e089-44bf-8e46-b435108f9172:ZeroCrossingDetector
 [pcbnew]
 version=1
 PageLayoutDescrFile=
@@ -312,3 +303,12 @@ uViaDrill=0.1
 dPairWidth=0.2
 dPairGap=0.25
 dPairViaGap=0.25
+[sheetnames]
+1=ff091216-0aa8-4b85-8575-a572122e4ab5:
+2=7bd4d8d0-8b0b-4f2e-8ff1-fd0084603fae:Afe
+3=656d525e-071c-4a84-baad-158886a80ed7:Misc
+4=a2b05a69-f893-4577-b497-d38f866418a6:SynchronousRectifier
+5=bea4f666-4cac-4da2-8ec8-6b7f68404c4c:Mcu
+6=979916f3-7626-4752-a997-62533ead75b3:HBridge
+7=2e0f5c7d-7faa-48fc-991b-69bf8fb5d03f:PowerSources
+8=ebf2dd12-e089-44bf-8e46-b435108f9172:ZeroCrossingDetector

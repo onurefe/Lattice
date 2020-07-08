@@ -33,21 +33,25 @@
             "command": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-gcc",
             "args": [
                 "-c",
-                "-DSTM32F103xB",
                 "-DUSE_HAL_DRIVER",
+                "-DSTM32F334x8",
                 "-IInc",
-                "-IDrivers/STM32F1xx_HAL_Driver/Inc",
-                "-IDrivers/STM32F1xx_HAL_Driver/Inc/Legacy",
-                "-IDrivers/CMSIS/Device/ST/STM32F1xx/Include",
+                "-IDrivers/STM32F3xx_HAL_Driver/Inc",
+                "-IDrivers/STM32F3xx_HAL_Driver/Inc/Legacy",
+                "-IDrivers/CMSIS/Device/ST/STM32F3xx/Include",
                 "-IDrivers/CMSIS/Include",
-                "-mcpu=cortex-m3",
+                "-IDrivers/CMSIS/Include",
+                "-mcpu=cortex-m4",
                 "-mthumb",
-                "-DSTM32F103xB",
+                "-mfpu=fpv4-sp-d16",
+                "-mfloat-abi=hard",
                 "-DUSE_HAL_DRIVER",
+                "-DSTM32F334x8",
                 "-IInc",
-                "-IDrivers/STM32F1xx_HAL_Driver/Inc",
-                "-IDrivers/STM32F1xx_HAL_Driver/Inc/Legacy",
-                "-IDrivers/CMSIS/Device/ST/STM32F1xx/Include",
+                "-IDrivers/STM32F3xx_HAL_Driver/Inc",
+                "-IDrivers/STM32F3xx_HAL_Driver/Inc/Legacy",
+                "-IDrivers/CMSIS/Device/ST/STM32F3xx/Include",
+                "-IDrivers/CMSIS/Include",
                 "-IDrivers/CMSIS/Include",
                 "-Og",
                 "-Wall",
@@ -98,7 +102,7 @@
                 "-f",
                 ".vscode/openocd",
                 "-c",
-                "program build/WaveUltrasonics.elf verify reset exit"
+                "program build/Firmware.elf verify reset exit"
             ],
             "problemMatcher": [],
             "dependsOn": "Build project"
@@ -113,7 +117,7 @@
                 "-f",
                 ".vscode/openocd",
                 "-c",
-                "program build/WaveUltrasonics.elf verify reset exit"
+                "program build/Firmware.elf verify reset exit"
             ],
             "problemMatcher": []
         },

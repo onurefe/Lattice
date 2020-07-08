@@ -1,0 +1,4 @@
+*Don't measure from the H bridge side; but from the transformer output side. Use a full bridge; but 1to1 transformer. 
+*You could measure potential as well. With a divider.
+*You may not use ACPL7900 for measuring higher currents. Variable trigger may be used for this. 
+*You may use magnetic coupling to for getting rid of ACPL7900. But this would decrease precision about calculating amplitudes of power and sth.

@@ -1,0 +1,11 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "settings": {
+        "cortex-debug.armToolchainPath": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/bin",
+        "cortex-debug.openocdPath": "/home/onur/STM32Toolchain/openocd/.content/bin/openocd"
+    }
+}

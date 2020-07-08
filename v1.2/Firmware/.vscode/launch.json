@@ -7,7 +7,7 @@
             "request": "launch",
             "servertype": "openocd",
             "cwd": "${workspaceFolder}",
-            "executable": "build/WaveUltrasonics.elf",
+            "executable": "build/Firmware.elf",
             "svdFile": ".vscode/STM32F103xx.svd",
             "configFiles": [
                 "/home/onur/STM32Toolchain/openocd/.content/scripts/interface/stlink.cfg",
