@@ -3,20 +3,15 @@
 
 /* Global inclusions -------------------------------------------------------*/
 #include "stm32f3xx_hal.h"
+#include "config.h"
 
 /* Global definitions ------------------------------------------------------*/
 #define MCU_CLOCK_FREQ 72000000
-#define HRTIM_CLOCK_FREQ 1152e6
-#define MAX_PWM_FREQ 24e3
-#define MIN_PWM_FREQ 19e3
-#define MAX_PWM_DUTY 0.5f
-#define MIN_PWM_DUTY 0.05f
-#define SEARCHING_NORMALIZED_POWER 0.2
-#define PWM_CYCLES_PER_CONTROL_CYCLE 32
+#define HRTIM_CLOCK_FREQ 1152e6f
+#define PWM_CYCLES_PER_CONTROL_CYCLE 64
 #define SAMPLES_PER_CYCLE 12
 #define TIM3_CLOCK_FREQ MCU_CLOCK_FREQ
 #define TIM3_PRESCALER 71
-#define DEFAULT_LINE_FREQ 50
 #define ISENS__Pin GPIO_PIN_0
 #define ISENS__GPIO_Port GPIOA
 #define ISENS_A1_Pin GPIO_PIN_1
@@ -55,8 +50,8 @@
 #define MISC0_GPIO_Port GPIOB
 #define MISC1_Pin GPIO_PIN_4
 #define MISC1_GPIO_Port GPIOB
-#define MISC2_Pin GPIO_PIN_5
-#define MISC2_GPIO_Port GPIOB
+#define CONTACTOR_CTRL_Pin GPIO_PIN_5
+#define CONTACTOR_CTRL_GPIO_Port GPIOB
 #define HMI_SELF_TX_Pin GPIO_PIN_6
 #define HMI_SELF_TX_GPIO_Port GPIOB
 #define HMI_SELF_RX_Pin GPIO_PIN_7
@@ -65,6 +60,7 @@
 #define THYRISTOR0_DRIVE_GPIO_Port GPIOB
 #define THYRISTOR1_DRIVE_Pin GPIO_PIN_9
 #define THYRISTOR1_DRIVE_GPIO_Port GPIOB
+#define FLASH_VOLTAGE_RANGE_3
 
 /* Global types ------------------------------------------------------------*/
 enum
@@ -73,6 +69,14 @@ enum
     TRUE = !FALSE
 };
 typedef uint8_t Bool_t;
+
+enum
+{
+    UNINIT = 0,
+    READY,
+    OPERATING
+};
+typedef uint8_t TaskStatus_t;
 
 /* Global constants --------------------------------------------------------*/
 #ifndef M_2PI

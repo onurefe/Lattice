@@ -1,4 +1,4 @@
-(kicad_pcb (version 20200119) (host pcbnew "5.99.0-unknown-1f9723c~101~ubuntu18.04.1")
+(kicad_pcb (version 20200628) (host pcbnew "5.99.0-unknown-f3f1740~101~ubuntu18.04.1")
 
   (general
     (thickness 1.6)
@@ -8,7 +8,7 @@
     (nets 156)
   )
 
-  (page "A3")
+  (paper "A3")
   (layers
     (0 "F.Cu" signal)
     (31 "B.Cu" signal)
@@ -29,7 +29,7 @@
     (46 "B.CrtYd" user)
     (47 "F.CrtYd" user)
     (48 "B.Fab" user)
-    (49 "F.Fab" user hide)
+    (49 "F.Fab" user)
   )
 
   (setup
@@ -46,43 +46,7 @@
       (copper_finish "None")
       (dielectric_constraints no)
     )
-    (last_trace_width 0.25)
-    (trace_clearance 0.2)
-    (zone_clearance 0.2)
-    (zone_45_only no)
-    (trace_min 0.2)
-    (clearance_min 0)
-    (via_min_size 0.4)
-    (through_hole_min 0.3)
-    (via_size 0.6)
-    (via_drill 0.4)
-    (uvia_size 0.3)
-    (uvia_drill 0.1)
-    (uvias_allowed no)
-    (uvia_min_size 0.2)
-    (uvia_min_drill 0.1)
-    (max_error 0.005)
-    (defaults
-      (edge_clearance 0.01)
-      (edge_cuts_line_width 0.05)
-      (courtyard_line_width 0.05)
-      (copper_line_width 0.2)
-      (copper_text_dims (size 1.5 1.5) (thickness 0.3))
-      (silk_line_width 0.12)
-      (silk_text_dims (size 1 1) (thickness 0.15))
-      (fab_layers_line_width 0.1)
-      (fab_layers_text_dims (size 1 1) (thickness 0.15))
-      (other_layers_line_width 0.1)
-      (other_layers_text_dims (size 1 1) (thickness 0.15))
-      (dimension_units 0)
-      (dimension_precision 1)
-    )
-    (pad_size 1.524 1.524)
-    (pad_drill 0.762)
-    (pad_to_mask_clearance 0.05)
-    (aux_axis_origin 0 0)
     (grid_origin 108.712 180.213)
-    (visible_elements FFFFFF7F)
     (pcbplotparams
       (layerselection 0x010f0_ffffffff)
       (usegerberextensions false)
@@ -271,228 +235,6 @@
   (net 153 "Net-(R27-Pad2)")
   (net 154 "Net-(R58-Pad1)")
   (net 155 "Net-(Q27-Pad1)")
-
-  (net_class "Default" "This is the default net class."
-    (clearance 0.2)
-    (trace_width 0.25)
-    (via_dia 0.6)
-    (via_drill 0.4)
-    (uvia_dia 0.3)
-    (uvia_drill 0.1)
-    (add_net "/ISENS")
-    (add_net "/LED_BLUE")
-    (add_net "/LED_GREEN")
-    (add_net "/LED_RED")
-    (add_net "/Mcu/LCD_BKLIGHT")
-    (add_net "/Mcu/LCD_BSENS")
-    (add_net "/Mcu/LCD_D4")
-    (add_net "/Mcu/LCD_D5")
-    (add_net "/Mcu/LCD_D6")
-    (add_net "/Mcu/LCD_D7")
-    (add_net "/Mcu/LCD_EN")
-    (add_net "/Mcu/LCD_RS")
-    (add_net "/Mcu/LCD_R~W")
-    (add_net "/Mcu/NRST")
-    (add_net "/Mcu/SWCLK")
-    (add_net "/Mcu/SWDIO")
-    (add_net "/OVERCURRENT")
-    (add_net "/RS485_DE~RE")
-    (add_net "/RS485_RX")
-    (add_net "/RS485_TX")
-    (add_net "/THRISTOR0_DRV")
-    (add_net "/THRISTOR1_DRV")
-    (add_net "/TRIGOUT")
-    (add_net "/ZERO_CROSSING")
-    (add_net "/~HBRIDGE_A_HSIDE")
-    (add_net "/~HBRIDGE_A_LSIDE")
-    (add_net "/~HBRIDGE_B_HSIDE")
-    (add_net "/~HBRIDGE_B_LSIDE")
-    (add_net "Earth_Protective")
-    (add_net "Net-(C10-Pad1)")
-    (add_net "Net-(C15-Pad2)")
-    (add_net "Net-(C22-Pad1)")
-    (add_net "Net-(C25-Pad1)")
-    (add_net "Net-(C25-Pad2)")
-    (add_net "Net-(C27-Pad1)")
-    (add_net "Net-(C29-Pad2)")
-    (add_net "Net-(C37-Pad2)")
-    (add_net "Net-(C39-Pad2)")
-    (add_net "Net-(C5-Pad2)")
-    (add_net "Net-(C6-Pad1)")
-    (add_net "Net-(C6-Pad2)")
-    (add_net "Net-(C7-Pad1)")
-    (add_net "Net-(C7-Pad2)")
-    (add_net "Net-(C73-Pad2)")
-    (add_net "Net-(C77-Pad2)")
-    (add_net "Net-(D18-Pad1)")
-    (add_net "Net-(D19-Pad2)")
-    (add_net "Net-(D20-Pad1)")
-    (add_net "Net-(D21-Pad2)")
-    (add_net "Net-(D22-Pad1)")
-    (add_net "Net-(D23-Pad2)")
-    (add_net "Net-(D24-Pad1)")
-    (add_net "Net-(D25-Pad2)")
-    (add_net "Net-(D26-Pad1)")
-    (add_net "Net-(D26-Pad2)")
-    (add_net "Net-(D28-Pad1)")
-    (add_net "Net-(D29-Pad1)")
-    (add_net "Net-(D29-Pad2)")
-    (add_net "Net-(D8-Pad1)")
-    (add_net "Net-(D9-Pad2)")
-    (add_net "Net-(J10-Pad3)")
-    (add_net "Net-(J2-Pad6)")
-    (add_net "Net-(J6-Pad2)")
-    (add_net "Net-(J6-Pad3)")
-    (add_net "Net-(J8-Pad1)")
-    (add_net "Net-(J8-Pad2)")
-    (add_net "Net-(J8-Pad3)")
-    (add_net "Net-(J8-Pad4)")
-    (add_net "Net-(JP1-Pad1)")
-    (add_net "Net-(JP1-Pad2)")
-    (add_net "Net-(Q16-Pad1)")
-    (add_net "Net-(Q18-Pad1)")
-    (add_net "Net-(Q19-Pad1)")
-    (add_net "Net-(Q20-Pad1)")
-    (add_net "Net-(Q21-Pad1)")
-    (add_net "Net-(Q22-Pad1)")
-    (add_net "Net-(Q23-Pad1)")
-    (add_net "Net-(Q23-Pad3)")
-    (add_net "Net-(Q24-Pad1)")
-    (add_net "Net-(Q24-Pad3)")
-    (add_net "Net-(Q25-Pad1)")
-    (add_net "Net-(Q25-Pad3)")
-    (add_net "Net-(Q26-Pad1)")
-    (add_net "Net-(Q26-Pad3)")
-    (add_net "Net-(Q27-Pad1)")
-    (add_net "Net-(R1-Pad1)")
-    (add_net "Net-(R10-Pad1)")
-    (add_net "Net-(R17-Pad2)")
-    (add_net "Net-(R18-Pad2)")
-    (add_net "Net-(R2-Pad1)")
-    (add_net "Net-(R20-Pad1)")
-    (add_net "Net-(R27-Pad2)")
-    (add_net "Net-(R50-Pad2)")
-    (add_net "Net-(R58-Pad1)")
-    (add_net "Net-(R9-Pad1)")
-    (add_net "Net-(U1-Pad3)")
-    (add_net "Net-(U10-Pad1)")
-    (add_net "Net-(U10-Pad4)")
-    (add_net "Net-(U11-Pad1)")
-    (add_net "Net-(U11-Pad4)")
-    (add_net "Net-(U15-Pad3)")
-    (add_net "Net-(U16-Pad10)")
-    (add_net "Net-(U16-Pad11)")
-    (add_net "Net-(U16-Pad14)")
-    (add_net "Net-(U16-Pad7)")
-    (add_net "Net-(U17-Pad11)")
-    (add_net "Net-(U17-Pad12)")
-    (add_net "Net-(U17-Pad2)")
-    (add_net "Net-(U17-Pad25)")
-    (add_net "Net-(U17-Pad3)")
-    (add_net "Net-(U17-Pad4)")
-    (add_net "Net-(U2-Pad3)")
-    (add_net "Net-(U7-Pad4)")
-    (add_net "Net-(U8-Pad1)")
-    (add_net "Net-(U8-Pad4)")
-    (add_net "Net-(U9-Pad1)")
-    (add_net "Net-(U9-Pad4)")
-  )
-
-  (net_class "Gnd" ""
-    (clearance 0.2)
-    (trace_width 0.5)
-    (via_dia 1.2)
-    (via_drill 0.8)
-    (uvia_dia 0.3)
-    (uvia_drill 0.1)
-    (add_net "GND")
-  )
-
-  (net_class "High power" ""
-    (clearance 0.2)
-    (trace_width 2)
-    (via_dia 3)
-    (via_drill 2)
-    (uvia_dia 0.3)
-    (uvia_drill 0.1)
-    (add_net "-VDC")
-    (add_net "Net-(C23-Pad2)")
-  )
-
-  (net_class "Low Power" ""
-    (clearance 0.2)
-    (trace_width 0.5)
-    (via_dia 1.2)
-    (via_drill 0.8)
-    (uvia_dia 0.3)
-    (uvia_drill 0.1)
-    (add_net "+15V")
-    (add_net "+5V")
-    (add_net "-15V")
-    (add_net "/GATE1_GND")
-    (add_net "/GATE1_V+")
-    (add_net "/GATE1_V-")
-    (add_net "/GATE2_V+")
-    (add_net "/GATE2_V-")
-    (add_net "/GATE3_GND")
-    (add_net "/GATE3_V+")
-    (add_net "/GATE3_V-")
-    (add_net "/GATE4_V+")
-    (add_net "/GATE4_V-")
-    (add_net "/RSENS+")
-    (add_net "GND1")
-    (add_net "GND2")
-    (add_net "Net-(C51-Pad1)")
-    (add_net "Net-(C52-Pad2)")
-    (add_net "Net-(C53-Pad1)")
-    (add_net "Net-(C54-Pad2)")
-    (add_net "Net-(C55-Pad1)")
-    (add_net "Net-(C56-Pad2)")
-    (add_net "Net-(C57-Pad1)")
-    (add_net "Net-(C58-Pad2)")
-    (add_net "Net-(C66-Pad1)")
-    (add_net "Net-(C66-Pad2)")
-    (add_net "Net-(C9-Pad2)")
-    (add_net "Net-(D1-Pad3)")
-    (add_net "Net-(D10-Pad2)")
-    (add_net "Net-(D12-Pad2)")
-    (add_net "Net-(D14-Pad2)")
-    (add_net "Net-(D16-Pad2)")
-    (add_net "Net-(D3-Pad3)")
-    (add_net "Net-(Q1-Pad1)")
-    (add_net "Net-(Q2-Pad1)")
-    (add_net "Net-(Q21-Pad3)")
-    (add_net "Net-(Q22-Pad3)")
-    (add_net "Net-(Q3-Pad1)")
-    (add_net "Net-(Q4-Pad1)")
-    (add_net "Net-(R14-Pad1)")
-    (add_net "Net-(R15-Pad1)")
-    (add_net "Net-(R3-Pad1)")
-    (add_net "Net-(R31-Pad2)")
-    (add_net "Net-(R32-Pad2)")
-    (add_net "Net-(R4-Pad1)")
-    (add_net "VDD")
-    (add_net "VDDA")
-    (add_net "Vdrive")
-  )
-
-  (net_class "Mid Power" ""
-    (clearance 0.2)
-    (trace_width 0.75)
-    (via_dia 1.8)
-    (via_drill 1.2)
-    (uvia_dia 0.3)
-    (uvia_drill 0.1)
-    (add_net "+VDC")
-    (add_net "/PHASE+")
-    (add_net "LINE")
-    (add_net "NEUT")
-    (add_net "Net-(C46-Pad2)")
-    (add_net "Net-(D7-Pad2)")
-    (add_net "Net-(D7-Pad3)")
-    (add_net "VCC")
-    (add_net "VEE")
-  )
 
   (module "oe_logos:lua_30_3x12_7mm" (layer "F.Cu") (tedit 0) (tstamp 1f94129d-2b81-46b2-9c4a-3afd30e098ad)
     (at 141.732 120.904)
@@ -18378,6 +18120,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 144.48045 116.468865) (xy 144.522542 116.519028) (xy 144.539431 116.5332) (xy 144.596149 116.565946) (xy 144.64979 116.603506)
         (xy 144.669771 116.612824) (xy 144.683902 116.61661) (xy 144.696567 116.623923) (xy 144.717286 116.631464) (xy 144.781778 116.642837)
@@ -19632,6 +19375,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 91.659233 142.52313) (xy 91.631927 142.541375) (xy 91.614377 142.558925) (xy 91.572852 142.621071) (xy 91.572852 142.621072)
         (xy 91.528313 142.687729) (xy 91.518815 142.710659) (xy 91.488594 142.86259) (xy 91.488594 142.887411) (xy 91.495001 142.91962)
@@ -21188,6 +20932,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 77.473577 157.588892) (xy 77.490834 157.604624) (xy 77.65174 157.704253) (xy 77.673515 157.712688) (xy 77.853795 157.746389)
         (xy 77.865397 157.747464) (xy 78.357561 157.747464) (xy 78.372033 157.745785) (xy 78.593143 157.693781) (xy 78.616941 157.682609)
@@ -22177,6 +21922,7 @@
       )
     )
     (filled_polygon
+      (layer B.Cu)
       (pts
         (xy 107.426881 96.536301) (xy 107.63647 96.586619) (xy 107.83561 96.669105) (xy 108.019388 96.781726) (xy 108.183289 96.921711)
         (xy 108.323274 97.085612) (xy 108.435895 97.26939) (xy 108.518381 97.46853) (xy 108.568699 97.678119) (xy 108.586 97.897956)
@@ -24193,6 +23939,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 100.67188 169.674622) (xy 100.88147 169.72494) (xy 101.080605 169.807425) (xy 101.264392 169.920049) (xy 101.432068 170.063258)
         (xy 103.875742 172.506932) (xy 104.018951 172.674608) (xy 104.131575 172.858395) (xy 104.21406 173.05753) (xy 104.264378 173.26712)
@@ -24288,7 +24035,7 @@
   (zone (net 0) (net_name "") (layer "F.Cu") (tstamp a6822343-dfab-42b3-9a8f-08f0ac5ac689) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24299,7 +24046,7 @@
   (zone (net 0) (net_name "") (layer "F.Cu") (tstamp 78d3a028-6e3f-495e-a3f0-6a14ae9de7ff) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24310,7 +24057,7 @@
   (zone (net 0) (net_name "") (layer "F.Cu") (tstamp 9704d4fb-2af9-4465-9c00-8ebb91df3e26) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24321,7 +24068,7 @@
   (zone (net 0) (net_name "") (layers F&B.Cu) (tstamp 0b483d1b-6fcf-45ba-a0f6-592a9dcab3b8) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24332,7 +24079,7 @@
   (zone (net 0) (net_name "") (layers F&B.Cu) (tstamp c27237b1-8acc-4e13-9b71-4c9ed74590e2) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24343,7 +24090,7 @@
   (zone (net 0) (net_name "") (layers F&B.Cu) (tstamp bbd1a9c3-8725-4ff4-985b-6a3f8b96645b) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24354,7 +24101,7 @@
   (zone (net 0) (net_name "") (layers F&B.Cu) (tstamp 98794cae-98e8-4773-9823-f1c942c4f34d) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24365,7 +24112,7 @@
   (zone (net 0) (net_name "") (layers F&B.Cu) (tstamp 93ebe50f-510d-4b20-bbdf-8919c92f8c68) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24376,7 +24123,7 @@
   (zone (net 0) (net_name "") (layers F&B.Cu) (tstamp 07e7d00a-de9b-43ee-a111-5f27530218d2) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts
@@ -24395,6 +24142,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 291.005396 60.360033) (xy 290.996333 60.363109) (xy 290.748503 60.468818) (xy 290.74001 60.47323) (xy 290.511021 60.615209)
         (xy 290.503292 60.620855) (xy 290.298414 60.795838) (xy 290.291629 60.802587) (xy 290.115576 61.006546) (xy 290.10989 61.014245)
@@ -24636,6 +24384,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 301.101881 73.041301) (xy 301.31147 73.091619) (xy 301.51061 73.174105) (xy 301.694388 73.286726) (xy 301.858289 73.426711)
         (xy 301.998274 73.590612) (xy 302.110895 73.77439) (xy 302.193381 73.97353) (xy 302.243699 74.183119) (xy 302.261 74.402956)
@@ -24870,6 +24619,7 @@
       )
     )
     (filled_polygon
+      (layer B.Cu)
       (pts
         (xy 257.659018 76.255465) (xy 257.65377 76.36675) (xy 261.265666 79.978646) (xy 261.381482 79.969531) (xy 261.593025 79.678367)
         (xy 261.597268 79.671681) (xy 261.621 79.628512) (xy 261.621 114.667885) (xy 261.596486 114.60597) (xy 261.593114 114.598804)
@@ -25385,6 +25135,7 @@
       )
     )
     (filled_polygon
+      (layer B.Cu)
       (pts
         (xy 285.184392 58.681729) (xy 285.348289 58.821711) (xy 285.488274 58.985612) (xy 285.600895 59.16939) (xy 285.683381 59.36853)
         (xy 285.733699 59.578119) (xy 285.751 59.797956) (xy 285.751 121.558044) (xy 285.733699 121.777881) (xy 285.683381 121.98747)
@@ -26113,6 +25864,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 207.550163 148.051258) (xy 207.552319 148.067634) (xy 207.627137 148.346859) (xy 207.63988 148.371339) (xy 207.77099 148.52759)
         (xy 207.787879 148.541761) (xy 207.96212 148.642359) (xy 207.982837 148.6499) (xy 208.019029 148.656282) (xy 207.894029 148.784822)
@@ -26256,6 +26008,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 212.745251 172.750231) (xy 212.742128 172.759278) (xy 212.673757 173.019891) (xy 212.672037 173.029306) (xy 212.643874 173.297264)
         (xy 212.643598 173.30683) (xy 212.65629 173.575964) (xy 212.657465 173.585463) (xy 212.710721 173.849581) (xy 212.713319 173.858792)
@@ -26556,6 +26309,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 321.421881 134.001301) (xy 321.63147 134.051619) (xy 321.83061 134.134105) (xy 322.014388 134.246726) (xy 322.178289 134.386711)
         (xy 322.318274 134.550612) (xy 322.430895 134.73439) (xy 322.513381 134.93353) (xy 322.563699 135.143119) (xy 322.581 135.362956)
@@ -26836,6 +26590,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 235.061881 147.971301) (xy 235.27147 148.021619) (xy 235.47061 148.104105) (xy 235.654388 148.216726) (xy 235.818289 148.356711)
         (xy 235.958274 148.520612) (xy 236.070895 148.70439) (xy 236.153381 148.90353) (xy 236.203699 149.113119) (xy 236.221 149.332956)
@@ -26870,6 +26625,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 321.421881 144.161301) (xy 321.63147 144.211619) (xy 321.83061 144.294105) (xy 322.014388 144.406726) (xy 322.178289 144.546711)
         (xy 322.318274 144.710612) (xy 322.430895 144.89439) (xy 322.513381 145.09353) (xy 322.563699 145.303119) (xy 322.581 145.522956)
@@ -27061,6 +26817,7 @@
       )
     )
     (filled_polygon
+      (layer F.Cu)
       (pts
         (xy 313.166881 172.101301) (xy 313.37647 172.151619) (xy 313.57561 172.234105) (xy 313.759388 172.346726) (xy 313.923289 172.486711)
         (xy 314.063274 172.650612) (xy 314.175895 172.83439) (xy 314.258381 173.03353) (xy 314.308699 173.243119) (xy 314.326 173.462956)
@@ -27215,6 +26972,7 @@
       )
     )
     (filled_polygon
+      (layer B.Cu)
       (pts
         (xy 321.421881 106.696301) (xy 321.63147 106.746619) (xy 321.83061 106.829105) (xy 322.014388 106.941726) (xy 322.178289 107.081711)
         (xy 322.318274 107.245612) (xy 322.430895 107.42939) (xy 322.513381 107.62853) (xy 322.563699 107.838119) (xy 322.581 108.057956)
@@ -27327,6 +27085,7 @@
       )
     )
     (filled_polygon
+      (layer B.Cu)
       (pts
         (xy 305.405624 95.265479) (xy 305.560553 95.312476) (xy 305.70334 95.388797) (xy 305.828492 95.491508) (xy 305.931203 95.61666)
         (xy 306.007524 95.759447) (xy 306.054521 95.914376) (xy 306.090515 96.279834) (xy 306.092931 96.291977) (xy 306.150727 96.482505)
@@ -27581,7 +27340,7 @@
   (zone (net 0) (net_name "") (layer "F.Cu") (tstamp 32af15f9-1f5b-4cbd-bec4-323762c75dd6) (hatch edge 0.508)
     (connect_pads (clearance 0.2))
     (min_thickness 0.254)
-    (keepout (tracks allowed) (vias allowed) (copperpour not_allowed))
+    (keepout (tracks allowed) (vias allowed) (pads allowed ) (copperpour not_allowed) (footprints allowed))
     (fill (thermal_gap 0.3) (thermal_bridge_width 0.3))
     (polygon
       (pts

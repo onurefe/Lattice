@@ -1,5 +1,29 @@
 {
   "board": {
+    "active_layer": 31,
+    "active_layer_preset": "",
+    "hidden_nets": [],
+    "high_contrast_mode": 0,
+    "net_color_mode": 1,
+    "opacity": {
+      "pads": 1.0,
+      "tracks": 1.0,
+      "vias": 1.0,
+      "zones": 1.0
+    },
+    "selection_filter": {
+      "dimensions": true,
+      "footprints": true,
+      "graphics": true,
+      "keepouts": true,
+      "lockedItems": true,
+      "otherItems": true,
+      "pads": true,
+      "text": true,
+      "tracks": true,
+      "vias": true,
+      "zones": true
+    },
     "visible_items": [
       0,
       1,
@@ -30,12 +54,14 @@
       28,
       29,
       30,
-      31
+      31,
+      36,
+      37
     ],
     "visible_layers": "1ffff_80000001"
   },
   "meta": {
     "filename": "WaveUltrasonics.kicad_prl",
-    "version": 1
+    "version": 2
   }
 }

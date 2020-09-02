@@ -3,7 +3,7 @@
     "ABOUT2": "User should not edit this fields, instead it should edit 'c_cpp_properties.json'",
     "ABOUT3": "This file is regenerated on 'Update workspace' task.",
     "VERSION": "1.7",
-    "LAST_RUN": "2020-07-07 15:03:24.399906",
+    "LAST_RUN": "2020-07-09 03:59:07.876239",
     "cSources": [
         "Src/main.c",
         "Src/stm32f3xx_it.c",
@@ -27,7 +27,10 @@
         "Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_flash_ex.c",
         "Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_i2c.c",
         "Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_i2c_ex.c",
-        "Src/system_stm32f3xx.c"
+        "Src/system_stm32f3xx.c",
+        "Src/lattice.c",
+        "Src/synchronous_rectifier.c",
+        "cparser/src/cparser.c"
     ],
     "asmSources": [],
     "ldSources": [
@@ -41,7 +44,7 @@
         "Drivers/STM32F3xx_HAL_Driver/Inc/Legacy",
         "Drivers/CMSIS/Device/ST/STM32F3xx/Include",
         "Drivers/CMSIS/Include",
-        "Drivers/CMSIS/Include"
+        "cparser/inc"
     ],
     "asmIncludes": [],
     "ldIncludes": [],
@@ -61,7 +64,6 @@
         "-IDrivers/STM32F3xx_HAL_Driver/Inc",
         "-IDrivers/STM32F3xx_HAL_Driver/Inc/Legacy",
         "-IDrivers/CMSIS/Device/ST/STM32F3xx/Include",
-        "-IDrivers/CMSIS/Include",
         "-IDrivers/CMSIS/Include",
         "-Og",
         "-Wall",
@@ -100,9 +102,9 @@
     "targetExecutablePath": "build/Firmware.elf",
     "cubeMxProjectPath": "Firmware.ioc",
     "openOcdConfig": [
-        ".vscode/openocd"
+        ".vscode/stm32f3x.cfg"
     ],
-    "stm32SvdPath": ".vscode/STM32F103xx.svd",
+    "stm32SvdPath": ".vscode/STM32F334x.svd",
     "ABOUT4": "---- Paths below are fetched from user-specific 'toolsPaths.json'. ----",
     "gccExePath": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/bin/arm-none-eabi-gcc",
     "gccInludePath": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-8-2018-q4-major/lib/gcc/arm-none-eabi/8.2.1/include",
