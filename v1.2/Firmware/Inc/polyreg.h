@@ -2,8 +2,9 @@
 #define __POLYREG_H
 
 #include "global.h"
+#include "complex.h"
 
 /* Exported functions ------------------------------------------------------*/
-extern void Polyreg_Fit1(float *samples, float *coefficients);
+extern void Polyreg_Fit(float *samples, float *coefficients);
 
 #endif

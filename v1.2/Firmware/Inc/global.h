@@ -8,7 +8,7 @@
 /* Global definitions ------------------------------------------------------*/
 #define MCU_CLOCK_FREQ 72000000
 #define HRTIM_CLOCK_FREQ 1152e6f
-#define PWM_CYCLES_PER_CONTROL_CYCLE 64
+#define PWM_CYCLES_PER_CONTROL_CYCLE 32
 #define SAMPLES_PER_CYCLE 12
 #define TIM3_CLOCK_FREQ MCU_CLOCK_FREQ
 #define TIM3_PRESCALER 71

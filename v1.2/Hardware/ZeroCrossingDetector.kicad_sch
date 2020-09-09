@@ -1,4 +1,4 @@
-(kicad_sch (version 20200618) (host eeschema "5.99.0-unknown-f3f1740~101~ubuntu18.04.1")
+(kicad_sch (version 20200828) (generator eeschema)
 
   (page 8 8)
 
@@ -99,11 +99,17 @@
       )
       (symbol "C_Small_0_1"
         (polyline
-          (pts (xy -1.524 -0.508) (xy 1.524 -0.508))
+          (pts
+            (xy -1.524 -0.508)
+            (xy 1.524 -0.508)
+          )
           (stroke (width 0.3302)) (fill (type none))
         )
         (polyline
-          (pts (xy -1.524 0.508) (xy 1.524 0.508))
+          (pts
+            (xy -1.524 0.508)
+            (xy 1.524 0.508)
+          )
           (stroke (width 0.3048)) (fill (type none))
         )
       )
@@ -142,15 +148,26 @@
       )
       (symbol "D_Small_0_1"
         (polyline
-          (pts (xy -0.762 -1.016) (xy -0.762 1.016))
+          (pts
+            (xy -0.762 -1.016)
+            (xy -0.762 1.016)
+          )
           (stroke (width 0.254)) (fill (type none))
         )
         (polyline
-          (pts (xy -0.762 0) (xy 0.762 0))
+          (pts
+            (xy -0.762 0)
+            (xy 0.762 0)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0.762 -1.016) (xy -0.762 0) (xy 0.762 1.016) (xy 0.762 -1.016))
+          (pts
+            (xy 0.762 -1.016)
+            (xy -0.762 0)
+            (xy 0.762 1.016)
+            (xy 0.762 -1.016)
+          )
           (stroke (width 0.254)) (fill (type none))
         )
       )
@@ -189,15 +206,26 @@
       )
       (symbol "D_Small_1_0_1"
         (polyline
-          (pts (xy -0.762 -1.016) (xy -0.762 1.016))
+          (pts
+            (xy -0.762 -1.016)
+            (xy -0.762 1.016)
+          )
           (stroke (width 0.254)) (fill (type none))
         )
         (polyline
-          (pts (xy -0.762 0) (xy 0.762 0))
+          (pts
+            (xy -0.762 0)
+            (xy 0.762 0)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0.762 -1.016) (xy -0.762 0) (xy 0.762 1.016) (xy 0.762 -1.016))
+          (pts
+            (xy 0.762 -1.016)
+            (xy -0.762 0)
+            (xy 0.762 1.016)
+            (xy 0.762 -1.016)
+          )
           (stroke (width 0.254)) (fill (type none))
         )
       )
@@ -236,15 +264,26 @@
       )
       (symbol "D_Small_3_0_1"
         (polyline
-          (pts (xy -0.762 -1.016) (xy -0.762 1.016))
+          (pts
+            (xy -0.762 -1.016)
+            (xy -0.762 1.016)
+          )
           (stroke (width 0.254)) (fill (type none))
         )
         (polyline
-          (pts (xy -0.762 0) (xy 0.762 0))
+          (pts
+            (xy -0.762 0)
+            (xy 0.762 0)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0.762 -1.016) (xy -0.762 0) (xy 0.762 1.016) (xy 0.762 -1.016))
+          (pts
+            (xy 0.762 -1.016)
+            (xy -0.762 0)
+            (xy 0.762 1.016)
+            (xy 0.762 -1.016)
+          )
           (stroke (width 0.254)) (fill (type none))
         )
       )
@@ -474,20 +513,35 @@
       (symbol "MMBT3904_0_1"
         (circle (center 1.27 0) (radius 2.8194) (stroke (width 0.254)) (fill (type none)))
         (polyline
-          (pts (xy 0.635 0.635) (xy 2.54 2.54))
+          (pts
+            (xy 0.635 0.635)
+            (xy 2.54 2.54)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0.635 -0.635) (xy 2.54 -2.54) (xy 2.54 -2.54))
+          (pts
+            (xy 0.635 -0.635)
+            (xy 2.54 -2.54)
+            (xy 2.54 -2.54)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0.635 1.905) (xy 0.635 -1.905) (xy 0.635 -1.905))
+          (pts
+            (xy 0.635 1.905)
+            (xy 0.635 -1.905)
+            (xy 0.635 -1.905)
+          )
           (stroke (width 0.508)) (fill (type none))
         )
         (polyline
-          (pts (xy 1.27 -1.778) (xy 1.778 -1.27) (xy 2.286 -2.286) (xy 1.27 -1.778)
-               (xy 1.27 -1.778)
+          (pts
+            (xy 1.27 -1.778)
+            (xy 1.778 -1.27)
+            (xy 2.286 -2.286)
+            (xy 1.27 -1.778)
+            (xy 1.27 -1.778)
           )
           (stroke (width 0)) (fill (type outline))
         )
@@ -528,7 +582,12 @@
       )
       (symbol "OPA228_0_1"
         (polyline
-          (pts (xy -5.715 7.62) (xy -5.715 -7.62) (xy 8.255 0) (xy -5.715 7.62))
+          (pts
+            (xy -5.715 7.62)
+            (xy -5.715 -7.62)
+            (xy 8.255 0)
+            (xy -5.715 7.62)
+          )
           (stroke (width 0)) (fill (type background))
         )
       )
@@ -576,15 +635,24 @@
       )
       (symbol "+15V_0_1"
         (polyline
-          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (pts
+            (xy -0.762 1.27)
+            (xy 0 2.54)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0 0) (xy 0 2.54))
+          (pts
+            (xy 0 0)
+            (xy 0 2.54)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (pts
+            (xy 0 2.54)
+            (xy 0.762 1.27)
+          )
           (stroke (width 0)) (fill (type none))
         )
       )
@@ -616,8 +684,13 @@
       )
       (symbol "-15V_0_1"
         (polyline
-          (pts (xy 0 0) (xy 0 1.27) (xy 0.762 1.27) (xy 0 2.54)
-               (xy -0.762 1.27) (xy 0 1.27)
+          (pts
+            (xy 0 0)
+            (xy 0 1.27)
+            (xy 0.762 1.27)
+            (xy 0 2.54)
+            (xy -0.762 1.27)
+            (xy 0 1.27)
           )
           (stroke (width 0)) (fill (type outline))
         )
@@ -650,8 +723,13 @@
       )
       (symbol "GND_0_1"
         (polyline
-          (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54)
-               (xy -1.27 -1.27) (xy 0 -1.27)
+          (pts
+            (xy 0 0)
+            (xy 0 -1.27)
+            (xy 1.27 -1.27)
+            (xy 0 -2.54)
+            (xy -1.27 -1.27)
+            (xy 0 -1.27)
           )
           (stroke (width 0)) (fill (type none))
         )
@@ -684,8 +762,13 @@
       )
       (symbol "PWR_FLAG_0_1"
         (polyline
-          (pts (xy 0 0) (xy 0 1.27) (xy -1.016 1.905) (xy 0 2.54)
-               (xy 1.016 1.905) (xy 0 1.27)
+          (pts
+            (xy 0 0)
+            (xy 0 1.27)
+            (xy -1.016 1.905)
+            (xy 0 2.54)
+            (xy 1.016 1.905)
+            (xy 0 1.27)
           )
           (stroke (width 0)) (fill (type none))
         )
@@ -718,15 +801,24 @@
       )
       (symbol "VDD_0_1"
         (polyline
-          (pts (xy -0.762 1.27) (xy 0 2.54))
+          (pts
+            (xy -0.762 1.27)
+            (xy 0 2.54)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0 0) (xy 0 2.54))
+          (pts
+            (xy 0 0)
+            (xy 0 2.54)
+          )
           (stroke (width 0)) (fill (type none))
         )
         (polyline
-          (pts (xy 0 2.54) (xy 0.762 1.27))
+          (pts
+            (xy 0 2.54)
+            (xy 0.762 1.27)
+          )
           (stroke (width 0)) (fill (type none))
         )
       )
@@ -739,21 +831,21 @@
     )
   )
 
-  (junction (at 98.425 83.82) (diameter 0) (color 0 0 0 0))
-  (junction (at 98.425 91.44) (diameter 0) (color 0 0 0 0))
-  (junction (at 116.84 83.82) (diameter 0) (color 0 0 0 0))
-  (junction (at 116.84 91.44) (diameter 0) (color 0 0 0 0))
-  (junction (at 119.38 83.82) (diameter 0) (color 0 0 0 0))
-  (junction (at 119.38 91.44) (diameter 0) (color 0 0 0 0))
-  (junction (at 121.92 83.82) (diameter 0) (color 0 0 0 0))
-  (junction (at 121.92 91.44) (diameter 0) (color 0 0 0 0))
-  (junction (at 133.985 76.2) (diameter 0) (color 0 0 0 0))
-  (junction (at 136.525 100.965) (diameter 0) (color 0 0 0 0))
-  (junction (at 153.035 87.63) (diameter 0) (color 0 0 0 0))
-  (junction (at 160.655 87.63) (diameter 0) (color 0 0 0 0))
-  (junction (at 168.91 81.915) (diameter 0) (color 0 0 0 0))
-  (junction (at 168.91 95.885) (diameter 0) (color 0 0 0 0))
-  (junction (at 183.515 81.915) (diameter 0) (color 0 0 0 0))
+  (junction (at 98.425 83.82) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 98.425 91.44) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 116.84 83.82) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 116.84 91.44) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 119.38 83.82) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 119.38 91.44) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 121.92 83.82) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 121.92 91.44) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 133.985 76.2) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 136.525 100.965) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 153.035 87.63) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 160.655 87.63) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 168.91 81.915) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 168.91 95.885) (diameter 0.3048) (color 0 0 0 0))
+  (junction (at 183.515 81.915) (diameter 0.3048) (color 0 0 0 0))
 
   (wire (pts (xy 89.535 83.82) (xy 98.425 83.82))
     (stroke (width 0) (type solid) (color 0 0 0 0))
@@ -952,7 +1044,7 @@
     (effects (font (size 1.27 1.27)) (justify left))
   )
 
-  (symbol (lib_id "power:PWR_FLAG") (at 127 75.184 0)
+  (symbol (lib_id "power:PWR_FLAG") (at 127 75.184 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "496fd26b-cc7f-48d6-a954-d53b8c929c3f")
     (property "Reference" "#FLG0123" (id 0) (at 127 73.279 0)
@@ -967,7 +1059,7 @@
     )
   )
 
-  (symbol (lib_id "power:PWR_FLAG") (at 128.27 100.965 0)
+  (symbol (lib_id "power:PWR_FLAG") (at 128.27 100.965 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "2acf5b5b-a560-4131-9926-fc18044ef004")
     (property "Reference" "#FLG0122" (id 0) (at 128.27 99.06 0)
@@ -982,7 +1074,7 @@
     )
   )
 
-  (symbol (lib_id "power:+15V") (at 133.985 75.565 0)
+  (symbol (lib_id "power:+15V") (at 133.985 75.565 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "0a85cf2f-1fe0-4743-9e16-af1c4a372399")
     (property "Reference" "#PWR059" (id 0) (at 133.985 79.375 0)
@@ -997,7 +1089,7 @@
     )
   )
 
-  (symbol (lib_id "power:-15V") (at 136.525 99.695 0)
+  (symbol (lib_id "power:-15V") (at 136.525 99.695 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "1e96cf59-5ae1-4bc7-a2ca-32f3e1c8ee18")
     (property "Reference" "#PWR060" (id 0) (at 136.525 97.155 0)
@@ -1012,7 +1104,7 @@
     )
   )
 
-  (symbol (lib_id "power:VDD") (at 168.91 74.93 0)
+  (symbol (lib_id "power:VDD") (at 168.91 74.93 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "be44fdd8-72e2-401b-a750-6d34e512d529")
     (property "Reference" "#PWR075" (id 0) (at 168.91 78.74 0)
@@ -1027,7 +1119,7 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 113.665 76.2 0)
+  (symbol (lib_id "power:GND") (at 113.665 76.2 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "dcc08fdc-e553-4a10-b1d5-cf70040fbfc7")
     (property "Reference" "#PWR058" (id 0) (at 113.665 82.55 0)
@@ -1042,7 +1134,7 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 141.605 77.47 0)
+  (symbol (lib_id "power:GND") (at 141.605 77.47 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "91f77e9f-6ac8-427e-89db-2d966ba0ccc1")
     (property "Reference" "#PWR061" (id 0) (at 141.605 83.82 0)
@@ -1057,7 +1149,7 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 144.145 102.235 0)
+  (symbol (lib_id "power:GND") (at 144.145 102.235 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "fff77c49-f30a-4169-9f66-ce114aa45f11")
     (property "Reference" "#PWR062" (id 0) (at 144.145 108.585 0)
@@ -1072,7 +1164,7 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 168.91 97.282 0)
+  (symbol (lib_id "power:GND") (at 168.91 97.282 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "cb7cbbd9-5b7a-44f8-bc69-d2dae03df0d2")
     (property "Reference" "#PWR065" (id 0) (at 168.91 103.632 0)
@@ -1087,7 +1179,7 @@
     )
   )
 
-  (symbol (lib_id "power:GND") (at 183.515 97.155 0)
+  (symbol (lib_id "power:GND") (at 183.515 97.155 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "df8ae848-2dfc-4584-ab4e-eb6a3d916d55")
     (property "Reference" "#PWR0133" (id 0) (at 183.515 103.505 0)
@@ -1102,7 +1194,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Small") (at 112.395 83.82 90)
+  (symbol (lib_id "Device:R_Small") (at 112.395 83.82 90) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "384cb91c-e1a2-4ac9-a5be-54a41f174233")
     (property "Reference" "R47" (id 0) (at 112.395 82.55 90))
@@ -1121,7 +1213,7 @@
     )
   )
 
-  (symbol (lib_id "Device:R_Small") (at 112.395 91.44 90)
+  (symbol (lib_id "Device:R_Small") (at 112.395 91.44 90) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "3e2a59c2-321a-49ec-a629-9ede860cf912")
     (property "Reference" "R48" (id 0) (at 112.395 90.17 90))
@@ -1140,7 +1232,7 @@
     )
   )
 
-  (symbol (lib_name "Device:R_Small_2") (lib_id "Device:R_Small") (at 116.84 78.74 180)
+  (symbol (lib_name "Device:R_Small_2") (lib_id "Device:R_Small") (at 116.84 78.74 180) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "b5a8198f-8177-4f5e-af52-8eb06b24e654")
     (property "Reference" "R49" (id 0) (at 118.3386 77.597 0)
@@ -1160,7 +1252,7 @@
     )
   )
 
-  (symbol (lib_name "Device:R_Small_3") (lib_id "Device:R_Small") (at 153.035 92.71 180)
+  (symbol (lib_name "Device:R_Small_3") (lib_id "Device:R_Small") (at 153.035 92.71 180) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "864c3b4d-061c-476c-9a01-ddd752d1636e")
     (property "Reference" "R50" (id 0) (at 154.5336 91.567 0)
@@ -1180,7 +1272,7 @@
     )
   )
 
-  (symbol (lib_name "Device:R_Small_7") (lib_id "Device:R_Small") (at 157.48 87.63 270)
+  (symbol (lib_name "Device:R_Small_7") (lib_id "Device:R_Small") (at 157.48 87.63 270) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "2a6c4d56-2a8d-4ee2-8b23-5d80c5e6566c")
     (property "Reference" "R13" (id 0) (at 157.48 88.9 90))
@@ -1222,7 +1314,7 @@
     )
   )
 
-  (symbol (lib_id "Device:D_Small") (at 119.38 87.63 90) (mirror x)
+  (symbol (lib_id "Device:D_Small") (at 119.38 87.63 90) (mirror x) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "c0d47f14-bd06-4517-b23e-ad108c060c7a")
     (property "Reference" "D26" (id 0) (at 117.475 86.995 0))
@@ -1241,7 +1333,7 @@
     )
   )
 
-  (symbol (lib_name "Device:D_Small_3") (lib_id "Device:D_Small") (at 121.92 87.63 270) (mirror x)
+  (symbol (lib_name "Device:D_Small_3") (lib_id "Device:D_Small") (at 121.92 87.63 270) (mirror x) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "99423c78-6a36-47b6-a1a0-39c0e5b6a53c")
     (property "Reference" "D27" (id 0) (at 123.825 88.265 0))
@@ -1260,7 +1352,7 @@
     )
   )
 
-  (symbol (lib_name "Device:D_Small_1") (lib_id "Device:D_Small") (at 160.655 91.948 90) (mirror x)
+  (symbol (lib_name "Device:D_Small_1") (lib_id "Device:D_Small") (at 160.655 91.948 90) (mirror x) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "b756d5ff-524c-43cb-ae70-66b3716bd7f4")
     (property "Reference" "D28" (id 0) (at 162.56 90.678 0))
@@ -1279,7 +1371,7 @@
     )
   )
 
-  (symbol (lib_id "Device:C_Small") (at 137.795 76.2 90)
+  (symbol (lib_id "Device:C_Small") (at 137.795 76.2 90) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "9ea7e77c-b141-4a24-a811-75d83ff36b3e")
     (property "Reference" "C59" (id 0) (at 137.795 71.755 90))
@@ -1298,7 +1390,7 @@
     )
   )
 
-  (symbol (lib_id "Device:C_Small") (at 140.335 100.965 90)
+  (symbol (lib_id "Device:C_Small") (at 140.335 100.965 90) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "35b02f5e-0e80-461c-90e3-f80ae4a5ad69")
     (property "Reference" "C60" (id 0) (at 140.335 96.52 90))
@@ -1317,7 +1409,7 @@
     )
   )
 
-  (symbol (lib_id "Connector:TestPoint_2Pole") (at 100.965 87.63 90)
+  (symbol (lib_id "Connector:TestPoint_2Pole") (at 100.965 87.63 90) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "a733265b-a2b4-41d4-b904-0f65fcb7e34a")
     (property "Reference" "TP13" (id 0) (at 103.0986 86.487 90)
@@ -1340,7 +1432,7 @@
     )
   )
 
-  (symbol (lib_name "Connector:TestPoint_2Pole_1") (lib_id "Connector:TestPoint_2Pole") (at 183.515 89.535 90)
+  (symbol (lib_name "Connector:TestPoint_2Pole_1") (lib_id "Connector:TestPoint_2Pole") (at 183.515 89.535 90) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "6d6988e4-0833-4dec-9952-c8b618415632")
     (property "Reference" "TP14" (id 0) (at 185.6487 88.3856 90)
@@ -1363,7 +1455,7 @@
     )
   )
 
-  (symbol (lib_id "Transistor_BJT:MMBT3904") (at 166.37 87.63 0)
+  (symbol (lib_id "Transistor_BJT:MMBT3904") (at 166.37 87.63 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "9dc513fc-4e81-4a96-af2c-c35ecd6b8d59")
     (property "Reference" "Q17" (id 0) (at 171.2214 86.487 0)
@@ -1386,7 +1478,7 @@
     )
   )
 
-  (symbol (lib_id "oe_opamp:OPA228") (at 135.89 87.63 0)
+  (symbol (lib_id "oe_opamp:OPA228") (at 135.89 87.63 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid "3be137a9-bef9-4f47-9699-2bf5c88667b3")
     (property "Reference" "U12" (id 0) (at 144.78 93.345 0)

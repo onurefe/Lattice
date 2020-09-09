@@ -230,12 +230,35 @@ Bool_t EepromEmulator_ReadObject(uint16_t objectId, uint16_t offset, uint16_t ma
     read_len = 0;
   }
 
-  if (pLength)
-    *pLength = read_len;
-  addr = pActivePage->data_stack_address + entry.relative_address + offset;
-  flashRead(addr, pData, read_len);
+  // Entry with zero length equals to delete operation.
+  if (entry.length)
+  {
+    if (pLength)
+    {
+      *pLength = read_len;
+    }
 
-  return TRUE;
+    addr = pActivePage->data_stack_address + entry.relative_address + offset;
+    flashRead(addr, pData, read_len);
+
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
+/**
+  * @brief  Clears object(by writing and object with zero length).
+  *
+  * @param  objectId: Id of the data object which is to be written.
+  *
+  * @retval None.
+  */
+void EepromEmulator_DeleteObject(uint16_t objectId)
+{
+  EepromEmulator_WriteObject(objectId, 0, NULL);
 }
 
 /**
@@ -290,12 +313,16 @@ void EepromEmulator_WriteObject(uint16_t objectId, uint16_t length, uint8_t *pDa
   flashWrite(addr, ((uint8_t *)&entry), sizeof(Entry_t));
 
   /* Write data to the data stack */
-  addr = pActivePage->data_stack_address + pActivePage->data_stack_pointer;
-  flashWrite(addr, pData, length);
+  if (length)
+  {
+    addr = pActivePage->data_stack_address + pActivePage->data_stack_pointer;
+    flashWrite(addr, pData, length);
+
+    pActivePage->data_stack_pointer += length;
+  }
 
   /* Update stack pointers */
   pActivePage->entry_stack_pointer++;
-  pActivePage->data_stack_pointer += length;
 }
 
 /**

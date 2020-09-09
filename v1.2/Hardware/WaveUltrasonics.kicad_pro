@@ -289,7 +289,8 @@
       "pin_not_driven": "error",
       "pin_to_pin": "warning",
       "similar_labels": "error",
-      "unresolved_variable": "error"
+      "unresolved_variable": "error",
+      "wire_dangling": "error"
     }
   },
   "libraries": {
@@ -312,6 +313,8 @@
         "microvia_diameter": 0.3,
         "microvia_drill": 0.1,
         "name": "Default",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
         "via_diameter": 0.8,
         "via_drill": 0.4,
@@ -328,6 +331,8 @@
         "microvia_drill": 0.1,
         "name": "Gnd",
         "nets": [],
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
         "via_diameter": 0.8,
         "via_drill": 0.4,
@@ -344,6 +349,8 @@
         "microvia_drill": 0.1,
         "name": "High power",
         "nets": [],
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
         "via_diameter": 0.8,
         "via_drill": 0.4,
@@ -360,6 +367,8 @@
         "microvia_drill": 0.1,
         "name": "Low Power",
         "nets": [],
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
         "via_diameter": 0.8,
         "via_drill": 0.4,
@@ -376,6 +385,8 @@
         "microvia_drill": 0.1,
         "name": "Mid Power",
         "nets": [],
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.25,
         "via_diameter": 0.8,
         "via_drill": 0.4,
@@ -424,7 +435,7 @@
   },
   "sheets": [
     [
-      "256c286a-0629-42a3-a54a-823e437c269a",
+      "d056d99f-c0cc-4c03-87eb-b5d4b79caa8a",
       ""
     ],
     [

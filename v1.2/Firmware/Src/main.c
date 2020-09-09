@@ -22,6 +22,7 @@
 #include "main.h"
 #include "lattice.h"
 #include "eeprom_emulator.h"
+#include "cli.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -34,7 +35,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define CONTACTOR_DELAY_IN_MS (1000.0f * (FBR_BULK_CAPACITOR * FBR_CHARGEUP_RESISTOR))
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -107,12 +108,15 @@ int main(void)
     MX_USART3_UART_Init();
 
     /* USER CODE BEGIN 2 */
-    HAL_Delay(STARTUP_DELAY_IN_MS);
+    Cli_Init();             // Initialize command line interface.
+    EepromEmulator_Init();  // Initialize eeprom emulator.
 
     // Turn on the contactor.
-    EepromEmulator_Init();
+    HAL_Delay(CONTACTOR_DELAY_IN_MS);
     HAL_GPIO_WritePin(CONTACTOR_CTRL_GPIO_Port, CONTACTOR_CTRL_Pin, GPIO_PIN_RESET);
-    Lattice_Start();
+
+    Lattice_Start();        // Start lattice module.
+    Cli_Start();            // Start command line interface.
     /* USER CODE END 2 */
 
     /* Infinite loop */

@@ -31,25 +31,31 @@ static void cropJerk(char *input, uint8_t start_idx, uint8_t length, uint8_t *st
 static uint8_t getLength(const char *input);
 
 /* Private variables -------------------------------------------------------*/
-static Cp_Command_t *CommandTable[CPARSER_CONFIG_MAX_NUM_OF_COMMANDS];
-static uint16_t NumOfCommands = 0;
-static Dictionary_Dictionary_t ParameterDictionary;
+static Cp_Trigger_t *TriggerTable[CPARSER_CONFIG_MAX_NUM_OF_TRIGGERS];
+static uint16_t NumOfTriggers = 0;
+static Dictionary_t ParameterDictionary;
 
 /* Exported functions ------------------------------------------------------*/
 /**
- * @brief Clears the command parser registry.
+ * @brief Clears the trigger parser registry.
  */
 void Cp_Reset(void)
 {
-    NumOfCommands = 0;
+    NumOfTriggers = 0;
 }
 
 /**
- * @brief Registers a command.
+ * @brief Registers a trigger.
+ * 
+ * @param triggers: Pointer to the trigger array.
+ * @param numOfTriggers: Number of triggers to be registered.
  */
-void Cp_Register(Cp_Command_t *command)
+void Cp_Register(Cp_Trigger_t *triggers, uint16_t numOfTriggers)
 {
-    CommandTable[NumOfCommands++] = command;
+    for (uint16_t i = 0; i < numOfTriggers; i++)
+    {
+        TriggerTable[NumOfTriggers++] = &triggers[i];
+    }
 }
 
 /**
@@ -72,20 +78,20 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
         return FALSE;
     }
 
-    // Find command.
-    Cp_Command_t *command = NULL;
-    for (uint8_t i = 0; i < NumOfCommands; i++)
+    // Find trigger.
+    Cp_Trigger_t *trigger = NULL;
+    for (uint8_t i = 0; i < NumOfTriggers; i++)
     {
-        if (doesMatch(CommandTable[i]->name, &input[fields[0].start],
+        if (doesMatch(TriggerTable[i]->name, &input[fields[0].start],
                       fields[0].length))
         {
-            command = CommandTable[i];
+            trigger = TriggerTable[i];
             break;
         }
     }
 
-    // If the command is not found; return FALSE.
-    if (!command)
+    // If the trigger is not found; return FALSE.
+    if (!trigger)
     {
         return FALSE;
     }
@@ -98,7 +104,7 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
     uint16_t bulk_data_size = 0;
 
     // Find params and parse their values.
-    for (uint8_t i = 0; i < command->numOfParams; i++)
+    for (uint8_t i = 0; i < trigger->numOfParams; i++)
     {
         for (uint8_t j = 1; j < field_count; j++)
         {
@@ -106,13 +112,14 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
 
             // If parameter is found; it should be parsed and added to the dictionary. Then next parameter
             //should be searched.
-            if (input[fields[j].start] == command->params[i].letter)
+            if (input[fields[j].start] == trigger->params[i].letter)
             {
                 if (parseValue(&input[fields[j].start + 1], fields[j].length - 1,
-                               command->params[i].type, &bulk_data[bulk_data_size], &param_size))
+                               trigger->params[i].type, &bulk_data[bulk_data_size], &param_size))
                 {
                     // Add parameter to dictionary.
-                    Dictionary_Add(&ParameterDictionary, command->params[i].letter, &bulk_data[bulk_data_size]);
+                    Dictionary_Add(&ParameterDictionary, trigger->params[i].letter,
+                                   trigger->params[i].type, &bulk_data[bulk_data_size]);
                     bulk_data_size += param_size;
 
                     break;
@@ -126,16 +133,16 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
     }
 
     // Call related callback.
-    command->callback(&ParameterDictionary);
+    trigger->callback(&ParameterDictionary);
 
     return TRUE;
 }
 
 /* Private functions -------------------------------------------------------*/
 /**
- * @brief Parse fields of the command string.
+ * @brief Parse fields of the trigger string.
  * 
- * @param input: Command line string.
+ * @param input: Trigger line string.
  * @param inputLength: Length of the input line string.
  * @param fields: Pointer to return fields of the line string.
  * @param numOfFields: Pointer to return number of fields.
@@ -172,20 +179,20 @@ void parseFields(char *input, uint8_t inputLength, Field_t *fields, uint8_t *num
 }
 
 /**
- * @brief Compare if the input matches to the command name.
+ * @brief Compare if the input matches to the trigger name.
  * 
- * @param cname: Null terminated command name string.
+ * @param tname: Null terminated trigger name string.
  * @param input: Input char array.
  * @param length: Length of the input.
  * 
  * @retval TRUE or FALSE.
  */
-Bool_t doesMatch(const char *cname, char *input, uint8_t length)
+Bool_t doesMatch(const char *tname, char *input, uint8_t length)
 {
     uint8_t name_len = 0;
 
-    // Parse length of the code name.
-    name_len = getLength(cname);
+    // Parse length of the trigger name.
+    name_len = getLength(tname);
 
     // If length of the name isn't equal to field length, return false.
     if (name_len != length)
@@ -197,7 +204,7 @@ Bool_t doesMatch(const char *cname, char *input, uint8_t length)
     Bool_t is_equal = TRUE;
     for (uint8_t i = 0; i < length; i++)
     {
-        if (cname[i] != input[i])
+        if (tname[i] != input[i])
         {
             is_equal = FALSE;
             break;

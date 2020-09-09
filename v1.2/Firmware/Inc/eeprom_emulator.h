@@ -25,40 +25,9 @@
 #include "global.h"
 
 /* Exported functions --------------------------------------------------------*/
-
-/**
-  * @brief  Eeprom emulator module initializer. Should be called before any other 
-  *         functions at this module could be used.
-  *
-  * @param  None.
-  *
-  * @retval None.
-  */
-extern void EepromEmulator_Init(void);
-
-/**
-  * @brief  Reads data object from the flash.
-  *
-  * @param  objectId: Data object id.
-  * @param  offset: Offset of the read start address.
-  * @param  maxLength: Maximum read length.
-  * @param  pLength: Pointer to return length of the data object.
-  * @param  pData: Pointer to return data.
-  *
-  * @retval True of False(If the object has been found, true).
-  */
-extern Bool_t EepromEmulator_ReadObject(uint16_t objectId, uint16_t offset, uint16_t maxLength,
+void EepromEmulator_Init(void);
+Bool_t EepromEmulator_ReadObject(uint16_t objectId, uint16_t offset, uint16_t maxLength,
                                         uint16_t *pLength, uint8_t *pData);
-
-/**
-  * @brief  Writes data object to the flash memory. 
-  *
-  * @param  objectId: Id of the data object which is to be written.
-  * @param  length: Length of the data object.
-  * @param  pData: Pointer of the data.
-  *
-  * @retval None.
-  */
-extern void EepromEmulator_WriteObject(uint16_t objectId, uint16_t length, uint8_t *pData);
-
+void EepromEmulator_WriteObject(uint16_t objectId, uint16_t length, uint8_t *pData);
+void EepromEmulator_DeleteObject(uint16_t objectId);
 #endif

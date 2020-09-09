@@ -21,22 +21,26 @@ extern "C"
     typedef struct
     {
         /*@{*/
-        char keys[CPARSER_CONFIG_MAX_NUM_OF_PARAMS];    /**< Letters paired with the values(keys) */
-        void *values[CPARSER_CONFIG_MAX_NUM_OF_PARAMS]; /**< Pointers to the values */
-        uint8_t numberOfElements;                       /**< Number of elements */
+        char keys[CPARSER_CONFIG_MAX_NUM_OF_PARAMS];     /**< Letters paired with the values(keys) */
+        uint8_t types[CPARSER_CONFIG_MAX_NUM_OF_PARAMS]; /**< Types of the values */
+        void *values[CPARSER_CONFIG_MAX_NUM_OF_PARAMS];  /**< Pointers to the values */
+        uint8_t numberOfElements;                        /**< Number of elements */
         /*@}*/
-    } Dictionary_Dictionary_t;
+    } Dictionary_t;
 
     /**
      * @brief Adds element to the dictionary.
      * 
      * @param dictionary: Pointer to the dictionary object.
      * @param key: Key of the element.
+     * @param type: Type of the parameter.
      * @param value: Pointer of the value of element.
      */
-    static inline void Dictionary_Add(Dictionary_Dictionary_t *dictionary, char key, void *value)
+    static inline void Dictionary_Add(Dictionary_t *dictionary, char key, uint8_t type,
+                                      void *value)
     {
         dictionary->keys[dictionary->numberOfElements] = key;
+        dictionary->types[dictionary->numberOfElements] = type;
         dictionary->values[dictionary->numberOfElements] = value;
         dictionary->numberOfElements++;
     }
@@ -47,7 +51,7 @@ extern "C"
      * @param dictionary: Pointer to the dictionary object.
      * @param key: Key of the element.
      */
-    static inline void Dictionary_Remove(Dictionary_Dictionary_t *dictionary, char key)
+    static inline void Dictionary_Remove(Dictionary_t *dictionary, char key)
     {
         // For all elements including the last element.
         for (uint8_t i = 0; i < dictionary->numberOfElements; i++)
@@ -58,6 +62,7 @@ extern "C"
                 //to be removed is the last element, this procedure would also lead to
                 //removing it.
                 dictionary->keys[i] = dictionary->keys[dictionary->numberOfElements - 1];
+                dictionary->types[i] = dictionary->types[dictionary->numberOfElements - 1];
                 dictionary->values[i] = dictionary->values[dictionary->numberOfElements - 1];
 
                 // Decrease number of elements.
@@ -73,7 +78,7 @@ extern "C"
      * 
      * @param dictionary: Pointer to the dictionary object.
      */
-    static inline void Dictionary_Clear(Dictionary_Dictionary_t *dictionary)
+    static inline void Dictionary_Clear(Dictionary_t *dictionary)
     {
         dictionary->numberOfElements = 0;
     }
@@ -86,7 +91,7 @@ extern "C"
      * 
      * @retval TRUE or FALSE.
      */
-    static inline Bool_t Dictionary_DoesExist(Dictionary_Dictionary_t *dictionary, char key)
+    static inline Bool_t Dictionary_DoesExist(Dictionary_t *dictionary, char key)
     {
         for (uint8_t i = 0; i < dictionary->numberOfElements; i++)
         {
@@ -104,15 +109,21 @@ extern "C"
      * 
      * @param dictionary: Pointer to the dictionary object.
      * @param key: Key of the element.
+     * @param type: Pointer to return the type of the element.
      * 
      * @retval NULL or pointer to the element value.
      */
-    static inline void *Dictionary_Get(Dictionary_Dictionary_t *dictionary, char key)
+    static inline void *Dictionary_Get(Dictionary_t *dictionary, char key, uint8_t *type)
     {
         for (uint8_t i = 0; i < dictionary->numberOfElements; i++)
         {
             if (dictionary->keys[i] == key)
             {
+                if (type)
+                {
+                    *type = dictionary->types[i];
+                }
+
                 return dictionary->values[i];
             }
         }

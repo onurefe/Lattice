@@ -63,5 +63,8 @@
   "meta": {
     "filename": "WaveUltrasonics.kicad_prl",
     "version": 2
+  },
+  "project": {
+    "files": []
   }
 }

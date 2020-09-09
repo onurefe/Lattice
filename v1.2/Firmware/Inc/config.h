@@ -1,19 +1,23 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-#define STARTUP_DELAY_IN_MS 1500
-#define LATTICE_MIN_PWM_FREQ 18e3f
-#define LATTICE_MAX_PWM_FREQ 22e3f
-#define LATTICE_TRACKING_STARTUP_NORMALIZED_POWER 0.05f
-#define LATTICE_SEARCHING_NORMALIZED_POWER 0.25f
-#define LATTICE_CALIBRATION_NORMALIZED_POWER 1.0f
-#define LATTICE_NONTRIGGERED_POWER 50.0f
-#define LATTICE_TRIGGERED_POWER 600.0f
-#define LATTICE_MAX_POWER 2000.0f
+/* Exported constants ------------------------------------------------------*/
+#define FBR_BULK_CAPACITOR 1880e-6
+#define FBR_CHARGEUP_RESISTOR 120.0
 
+// Lattice module configuration.
+#define LATTICE_MIN_FREQUENCY 18E3
+#define LATTICE_MAX_FREQUENCY 22E3
+
+// Calibration function constants.
+#define CALIBRATION_POLY_DEGREE 2
+#define CALIBRATION_NUM_OF_SAMPLES 100
+
+// RS485 module configuration.
 #define RS485_RX_BUFFER_SIZE 128
 #define RS485_TX_BUFFER_SIZE 128
 
+// CLI module configuration.
 #define CLI_MAX_COMMAND_LINE_LENGTH 64
 #define CLI_LINE_TERMINATOR \
     {                       \

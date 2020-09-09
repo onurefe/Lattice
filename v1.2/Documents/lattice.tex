@@ -33,10 +33,17 @@ Normalized real power can be calculated as;
     = \frac{w^2rc^2}{w^4l^2c^2 - 2w^2lc + w^2r^2c^2 + 1} = \frac{w^2rc^2}{w^4l^2c^2 + w^2(r^2c^2 - 2lc) + 1}
 \end{multline}
 
-Expression isn't suitable for linearization. But $\frac{p_r}{p_{img}}$ can be a much more suitable measure;
+Expression isn't suitable for linearization. But $\frac{p_{img}}{p_r}$ can be a much more suitable measure;
 \begin{multline}{\label{temp:1}}
-    \frac{p_r}{p_{img}} = \frac{\frac{w^2rc^2}{w^4l^2c^2 + w^2(r^2c^2 - 2lc) + 1}}{\frac{wc-w^3lc^2}{(1-w^2lc)^2 + (wrc)^2}}
-    = \frac{w^2rc^2}{wc-w^3lc^2} = \frac{wrc}{1-w^2lc}
+    \frac{p_{img}}{p_r} 
+    = \frac{\frac{wc-w^3lc^2}{(1-w^2lc)^2 + (wrc)^2} - \frac{1}{wc_p}}{\frac{w^2rc^2}{(1-w^2lc)^2 + (wrc)^2}}
+    = \frac{wc-w^3lc^2}{w^2rc^2} - \frac{{(1-w^2lc)^2 + (wrc)^2}}{w^3 rc^2 c_p} \\
+    = \frac{1-w^2lc}{wrc} - \frac{{(1-w^2lc)^2 + (wrc)^2}}{w^3 rc^2 c_p}
+\end{multline}
+
+Adding the normalized reactive power consumed by capacitance;
+\begin{multline}
+    \frac{1-w^2lc - \frac{1}{wc_p}}{wrc} 
 \end{multline}
 
 Introducing quality factor which is defined defined as;
