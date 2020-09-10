@@ -86,6 +86,8 @@ static Pid_t TrackingPowerPid;
 static Pid_t TrackingFrequencyPid;
 static Bool_t TrackingTriggeredLagged;
 static Bool_t TrackingTriggered;
+static uint32_t TrackingErrorTimeout;
+static volatile uint32_t LastOnTrackTick;
 
 // Monitored variables and their shadow registers.
 static float MonitoringPeriod;
@@ -221,7 +223,8 @@ void Core_Search(float normalizedPower, float startFrequency, float stopFrequenc
 
 void Core_Track(Pid_Params_t *powerTrackingPidParams,
                 Pid_Params_t *frequencyTrackingPidParams,
-                float anchorFrequency, float fullPower, float destinationPower)
+                float anchorFrequency, float fullPower, float destinationPower,
+                uint32_t trackingErrorTimeout)
 {
     // Status check.
     if (Status != CORE_STATUS_READY)
@@ -241,6 +244,7 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     TrackingAnchorFrequency = anchorFrequency;
     TrackingDestinationPower = destinationPower;
     TrackingFullPower = fullPower;
+    TrackingErrorTimeout = trackingErrorTimeout;
 
     // Clear monitoring runtime variables.
     Complex_Set(&MonitoringPower, destinationPower, 0.0f);
@@ -255,6 +259,8 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     // Start the engine. This will enable ADC operation and ISRs.
     engineStart();
 
+    LastOnTrackTick = HAL_GetTick();
+
     Events = 0;
     Status = CORE_STATUS_TRACKING;
 }
@@ -266,6 +272,11 @@ void Core_Execute(void)
         (Status != CORE_STATUS_SEARCHING) && (Status != CORE_STATUS_TRACKING))
     {
         return;
+    }
+
+    if ((LastOnTrackTick + TrackingErrorTimeout) < HAL_GetTick())
+    {
+        Core_TrackingErrorCallback();
     }
 
     // Handle scan completed event.
@@ -480,9 +491,25 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
                               ((TrackingDestinationPower - power.real) / TrackingFullPower),
                               deltat));
 
+        // Calculate tracking measure.
+        float tracking_measure;
+        tracking_measure = power.img / power.real;
+        if (tracking_measure > 1.0f)
+        {
+            tracking_measure = 1.0f;
+        }
+        else if (tracking_measure < -1.0f)
+        {
+            tracking_measure = -1.0f;
+        }
+        else
+        {
+            LastOnTrackTick = HAL_GetTick();
+        }
+        
         // Get frequency.
         frequency = pidExe(&TrackingFrequencyPid,
-                           clamp((power.img / power.real), -1.0f, 1.0f), deltat) +
+                           clamp((tracking_measure), -1.0f, 1.0f), deltat) +
                     TrackingAnchorFrequency;
 
         updateClockCircuitry(frequency, duty);

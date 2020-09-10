@@ -26,7 +26,8 @@ void Core_Search(float normalizedPower, float startFrequency, float stopFrequenc
                  uint16_t steps);
 void Core_Track(Pid_Params_t *powerTrackingPidParams,
                 Pid_Params_t *frequencyTrackingPidParams,
-                float anchorFrequency, float fullPower, float destinationPower);
+                float anchorFrequency, float fullPower, float destinationPower,
+                uint32_t trackingErrorTimeout);
 void Core_Execute(void);
 void Core_Stop(void);
 void Core_TriggerStatusUpdate(Bool_t triggered);
@@ -39,5 +40,6 @@ void Core_SearchCompletedCallback(float resonanceFrequency, float resonanceImped
                                   float fullPower);
 void Core_PeriodicMeasurementCallback(float frequency, float duty,
                                       Complex_t *power, Complex_t *impedance);
+void Core_TrackingErrorCallback();
 
 #endif

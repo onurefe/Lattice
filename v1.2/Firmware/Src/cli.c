@@ -12,10 +12,13 @@ static void setDeviceInfoCallback(Dictionary_t *params);
 static void getDeviceInfoCallback(Dictionary_t *params);
 static void setSearchParametersCallback(Dictionary_t *params);
 static void getSearchParametersCallback(Dictionary_t *params);
+static void setErrorDetectionParametersCallback(Dictionary_t *params);
+static void getErrorDetectionParametersCallback(Dictionary_t *params);
 static void setPowerTrackingPidCoeffsCallback(Dictionary_t *params);
 static void getPowerTrackingPidCoeffsCallback(Dictionary_t *params);
 static void setFrequencyTrackingPidCoeffsCallback(Dictionary_t *params);
 static void getFrequencyTrackingPidCoeffsCallback(Dictionary_t *params);
+static void setDestinationPowerCallback(Dictionary_t *params);
 static void measureCallback(Dictionary_t *params);
 static void resetCallback(Dictionary_t *params);
 static void calibrateCallback(Dictionary_t *params);
@@ -28,13 +31,12 @@ extern UART_HandleTypeDef huart3;
 /* Private variables -------------------------------------------------------*/
 static Cp_Trigger_t TriggerTable[] =
     {
-        // Authorize.
+        // Factory mode.
         {
-            .name = "authorize",
+            .name = "factory",
             .params = {{.letter = 'P', .type = CP_PARAM_TYPE_INTEGER}},
-            .callback = authorizeCallback,
-            .numOfParams = 1
-        },
+            .callback = factoryCallback,
+            .numOfParams = 1},
 
         // Set constraints.
         {
@@ -83,6 +85,25 @@ static Cp_Trigger_t TriggerTable[] =
             .callback = getSearchParametersCallback,
             .numOfParams = 0},
 
+        // Set error detection parameters.
+        {
+            .name = "errdet-s",
+            .params = {{.letter = 'N', .type = CP_PARAM_TYPE_REAL},
+                       {.letter = 'M', .type = CP_PARAM_TYPE_REAL},
+                       {.letter = 'V', .type = CP_PARAM_TYPE_REAL},
+                       {.letter = 'X', .type = CP_PARAM_TYPE_REAL},
+                       {.letter = 'T', .type = CP_PARAM_TYPE_REAL}},
+            .callback = setErrorDetectionParametersCallback,
+            .numOfParams = 5},
+
+        // Get error detection parameters.
+        {
+            .name = "errdet-g",
+            .params = {},
+            .callback = getErrorDetectionParametersCallback,
+            .numOfParams = 0
+        },
+
         // Set power tracking PID coefficients.
         {
             .name = "pwpid-s",
@@ -116,6 +137,13 @@ static Cp_Trigger_t TriggerTable[] =
             .params = {},
             .callback = getFrequencyTrackingPidCoeffsCallback,
             .numOfParams = 0},
+
+        // Set destination power.
+        {
+            .name = "setpw",
+            .params = {{.letter = 'P', .type = CP_PARAM_TYPE_REAL}},
+            .callback = setDestinationPowerCallback,
+            .numOfParams = 1},
 
         // Measurement command.
         {
@@ -215,18 +243,43 @@ void Cli_Stop(void)
     Rs485_Stop();
 }
 
+/* Private functions -------------------------------------------------------*/
+void operationResult(Bool_t success)
+{
+    char buff[16];
+    uint8_t ret;
+    uint8_t length;
+
+    if (success)
+    {
+        ret = 1;
+    }
+    else
+    {
+        ret = 0;
+    }
+
+    // Send response message.
+    length = snprintf(buff, sizeof(buff), "opres R%d", ret);
+    Rs485_Transmit(buff, length);
+
+    char line_term[] = CLI_LINE_TERMINATOR;
+    Rs485_Transmit(line_term, sizeof(line_term));
+}
+
 /* Callback functions ------------------------------------------------------*/
-void authorizeCallback(Dictionary_t *params)
+void factoryCallback(Dictionary_t *params)
 {
     int32_t *password;
-    
     password = (int32_t *)Dictionary_Get(params, 'P', NULL);
+
     if (password)
     {
-        if (Lattice_Authorize(*password))
-        {
-            
-        }
+        operationResult(Lattice_Factory(*password));
+    }
+    else
+    {
+        operationResult(FALSE);
     }
 }
 
@@ -235,9 +288,6 @@ void setConstraintsCallback(Dictionary_t *params)
     float *max_power;
     float *min_loading;
     float *max_loading;
-    char buff[16];
-    uint8_t ret;
-    uint8_t length;
 
     // Parse parameters from the dictionary.
     max_power = (float *)Dictionary_Get(params, 'P', NULL);
@@ -247,10 +297,12 @@ void setConstraintsCallback(Dictionary_t *params)
     // If every parameter parsed successfully, set the constraints.
     if (max_power && min_loading && max_loading)
     {
-        if (Lattice_SetConstraints(*max_power, *min_loading, *max_loading))
-        {
-            Rs485_
-        }
+        operationResult(Lattice_SetConstraints(*max_power, *min_loading,
+                                               *max_loading));
+    }
+    else
+    {
+        operationResult(FALSE);
     }
 }
 
@@ -298,7 +350,12 @@ void setDeviceInfoCallback(Dictionary_t *params)
     // If every parameter parsed successfully, set device info.
     if (deviceId && versionMinor && versionMajor)
     {
-        Lattice_SetDeviceInfo(*deviceId, *versionMajor, *versionMinor);
+        operationResult(Lattice_SetDeviceInfo(*deviceId, *versionMajor,
+                                              *versionMinor));
+    }
+    else
+    {
+        operationResult(FALSE);
     }
 }
 
@@ -343,7 +400,12 @@ void setSearchParametersCallback(Dictionary_t *params)
     // Set searching parameters if parsing is successfull.
     if (normalized_power && steps)
     {
-        Lattice_SetSearchingParams(*normalized_power, (uint16_t)*steps);
+        operationResult(Lattice_SetSearchingParams(*normalized_power,
+                                                   (uint16_t)*steps));
+    }
+    else
+    {
+        operationResult(FALSE);
     }
 }
 
@@ -375,6 +437,14 @@ void getSearchParametersCallback(Dictionary_t *params)
     Rs485_Transmit(line_term, sizeof(line_term));
 }
 
+void setErrorDetectionParametersCallback(Dictionary_t *params)
+{
+}
+
+void getErrorDetectionParametersCallback(Dictionary_t *params)
+{
+}
+
 void setPowerTrackingPidCoeffsCallback(Dictionary_t *params)
 {
     float *kp;
@@ -391,7 +461,11 @@ void setPowerTrackingPidCoeffsCallback(Dictionary_t *params)
     // Set power tracking PID parameters.
     if (kp && ki && kd && tf)
     {
-        Lattice_SetPowerTrackingPidCoeffs(*kp, *ki, *kd, *tf);
+        operationResult(Lattice_SetPowerTrackingPidCoeffs(*kp, *ki, *kd, *tf));
+    }
+    else
+    {
+        operationResult(FALSE);
     }
 }
 
@@ -438,7 +512,12 @@ void setFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
     // Set frequency tracking PID parameters.
     if (kp && ki && kd && tf)
     {
-        Lattice_SetFrequencyTrackingPidCoeffs(*kp, *ki, *kd, *tf);
+        operationResult(Lattice_SetFrequencyTrackingPidCoeffs(*kp, *ki,
+                                                              *kd, *tf));
+    }
+    else
+    {
+        operationResult(FALSE);
     }
 }
 
@@ -469,30 +548,50 @@ void getFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
     Rs485_Transmit(line_term, sizeof(line_term));
 }
 
+void setDestinationPowerCallback(Dictionary_t *params)
+{
+    float *output_power;
+
+    output_power = (float *)Dictionary_Get(params, 'P', NULL);
+    if (output_power)
+    {
+        operationResult(Lattice_SetDestinationPower(*output_power));
+    }
+    else
+    {
+        operationResult(FALSE);
+    }
+}
+
 void measureCallback(Dictionary_t *params)
 {
-    int32_t *isOn;
-    float *measurementPeriod;
+    int32_t *is_on;
+    float *measurement_period;
 
-    // Parser parameters.
-    isOn = (int32_t *)Dictionary_Get(params, 'S', NULL);
-    measurementPeriod = (float *)Dictionary_Get(params, 'P', NULL);
+    // Parse parameters.
+    is_on = (int32_t *)Dictionary_Get(params, 'S', NULL);
+    measurement_period = (float *)Dictionary_Get(params, 'P', NULL);
 
     // If parsing is successfull, call measure function.
-    if (isOn && measurementPeriod)
+    if (is_on && measurement_period)
     {
-        Lattice_Measure(*isOn, *measurementPeriod);
+        operationResult(Lattice_Measure(*is_on, *measurement_period));
+    }
+    else
+    {
+        operationResult(FALSE);
     }
 }
 
 void resetCallback(Dictionary_t *params)
 {
     Lattice_Reset();
+    operationResult(TRUE);
 }
 
 void calibrateCallback(Dictionary_t *params)
 {
-    Lattice_Calibrate();
+    operationResult(Lattice_Calibrate());
 }
 
 void getStatusCallback(Dictionary_t *params)
@@ -500,7 +599,7 @@ void getStatusCallback(Dictionary_t *params)
     Lattice_Status_t status;
     char buff[16];
     uint8_t length;
-    
+
     status = Lattice_GetStatus();
     length = snprintf(buff, "gstat-r S%d", sizeof(buff), status);
 
@@ -517,7 +616,7 @@ void getErrorCallback(Dictionary_t *params)
     Lattice_Error_t error;
     char buff[16];
     uint8_t length;
-    
+
     error = Lattice_GetError();
     length = snprintf(buff, "gerror-r E%d", sizeof(buff), error);
 

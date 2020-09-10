@@ -2,6 +2,11 @@
 #define __CONFIG_H
 
 /* Exported constants ------------------------------------------------------*/
+#define LATTICE_AUTHORIZATION_TIMEOUT_IN_MS (600U * 1000U)
+#define LATTICE_HASH_OFFSET 11199522U
+#define LATTICE_HASH_DIVISOR 0x97F56F91U
+
+// Contactor trigger time.
 #define FBR_BULK_CAPACITOR 1880e-6
 #define FBR_CHARGEUP_RESISTOR 120.0
 

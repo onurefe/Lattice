@@ -123,6 +123,7 @@ int main(void)
     /* USER CODE BEGIN WHILE */
     while (1)
     {
+        Cli_Execute();
         Lattice_Execute();
         /* USER CODE END WHILE */
 
