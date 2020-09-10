@@ -41,7 +41,7 @@ enum
 {
     EVENT_SCAN_COMPLETED = (1 << 0),
     EVENT_SEARCH_COMPLETED = (1 << 1),
-    EVENT_PERIODIC_MEASUREMENT = (1 << 2),
+    EVENT_MONITORING_UPDATE = (1 << 2),
     EVENT_ERROR_OCCURRED = (1 << 3)
 };
 typedef uint16_t Event_t;
@@ -84,10 +84,8 @@ static float TrackingFullPower;
 static float TrackingDestinationPower;
 static Pid_t TrackingPowerPid;
 static Pid_t TrackingFrequencyPid;
-static Bool_t TrackingTriggeredLagged;
 static Bool_t TrackingTriggered;
-static uint32_t TrackingErrorTimeout;
-static volatile uint32_t LastOnTrackTick;
+static Bool_t TrackingTriggeredPreload;
 
 // Monitored variables and their shadow registers.
 static float MonitoringPeriod;
@@ -101,6 +99,7 @@ static Complex_t MonitoringPowerShadow;
 static Complex_t MonitoringImpedanceShadow;
 static float MonitoringFrequencyShadow;
 static float MonitoringLoadingShadow;
+static Bool_t MonitoringTriggeredShadow;
 
 // Control variables used in searching mode.
 static float SearchingResonanceFrequency;
@@ -141,8 +140,8 @@ void Core_Init(Complex_t *calibrationCoeffs, float minFrequency, float maxFreque
     ConstraintMaxNormPower = maxNormPower;
 
     // Not-triggered initially.
+    TrackingTriggeredPreload = FALSE;
     TrackingTriggered = FALSE;
-    TrackingTriggeredLagged = FALSE;
 
     // Periodic measurements disabled.
     MonitoringEnabled = FALSE;
@@ -223,8 +222,7 @@ void Core_Search(float normalizedPower, float startFrequency, float stopFrequenc
 
 void Core_Track(Pid_Params_t *powerTrackingPidParams,
                 Pid_Params_t *frequencyTrackingPidParams,
-                float anchorFrequency, float fullPower, float destinationPower,
-                uint32_t trackingErrorTimeout)
+                float anchorFrequency, float fullPower, float destinationPower)
 {
     // Status check.
     if (Status != CORE_STATUS_READY)
@@ -244,7 +242,6 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     TrackingAnchorFrequency = anchorFrequency;
     TrackingDestinationPower = destinationPower;
     TrackingFullPower = fullPower;
-    TrackingErrorTimeout = trackingErrorTimeout;
 
     // Clear monitoring runtime variables.
     Complex_Set(&MonitoringPower, destinationPower, 0.0f);
@@ -259,8 +256,6 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     // Start the engine. This will enable ADC operation and ISRs.
     engineStart();
 
-    LastOnTrackTick = HAL_GetTick();
-
     Events = 0;
     Status = CORE_STATUS_TRACKING;
 }
@@ -272,11 +267,6 @@ void Core_Execute(void)
         (Status != CORE_STATUS_SEARCHING) && (Status != CORE_STATUS_TRACKING))
     {
         return;
-    }
-
-    if ((LastOnTrackTick + TrackingErrorTimeout) < HAL_GetTick())
-    {
-        Core_TrackingErrorCallback();
     }
 
     // Handle scan completed event.
@@ -294,24 +284,22 @@ void Core_Execute(void)
     if ((Events & EVENT_SEARCH_COMPLETED) != 0)
     {
         Status = CORE_STATUS_READY;
-        
+
         engineStop();
         Core_SearchCompletedCallback(SearchingResonanceFrequency,
                                      SearchingResonanceImpedance,
                                      SearchingFullPower);
 
-        
         Events ^= EVENT_SEARCH_COMPLETED;
     }
 
     // Handle periodic measurement event.
-    if ((Events & EVENT_PERIODIC_MEASUREMENT) != 0)
+    if ((Events & EVENT_MONITORING_UPDATE) != 0)
     {
-        Core_PeriodicMeasurementCallback(MonitoringFrequencyShadow,
-                                         MonitoringLoadingShadow, &MonitoringPowerShadow,
-                                         &MonitoringImpedanceShadow);
+        Core_MonitoringCallback(MonitoringTriggeredShadow, MonitoringFrequencyShadow, MonitoringLoadingShadow, 
+                                &MonitoringPowerShadow, &MonitoringImpedanceShadow);
 
-        Events ^= EVENT_PERIODIC_MEASUREMENT;
+        Events ^= EVENT_MONITORING_UPDATE;
     }
 }
 
@@ -331,7 +319,7 @@ void Core_Stop(void)
 
 void Core_TriggerStatusUpdate(Bool_t triggered)
 {
-    TrackingTriggered = triggered;
+    TrackingTriggeredPreload = triggered;
 }
 
 void Core_PeriodicMeasurements(Bool_t enabled, float period)
@@ -406,7 +394,7 @@ inline void scanner(Complex_t *voltage, Complex_t *current)
     if (Iteration < Steps)
     {
         Complex_t impedance;
-        
+
         // Calculate impedance and store it.
         Complex_Divide(voltage, current, &impedance);
         ScanningImpedanceReal[Iteration] = impedance.real;
@@ -481,7 +469,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
     deltat = PWM_CYCLES_PER_CONTROL_CYCLE / PwmFrequency;
 
     // Don't execute PIDs if not triggered.
-    if (TrackingTriggeredLagged)
+    if (TrackingTriggered)
     {
         float duty;
         float frequency;
@@ -494,19 +482,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
         // Calculate tracking measure.
         float tracking_measure;
         tracking_measure = power.img / power.real;
-        if (tracking_measure > 1.0f)
-        {
-            tracking_measure = 1.0f;
-        }
-        else if (tracking_measure < -1.0f)
-        {
-            tracking_measure = -1.0f;
-        }
-        else
-        {
-            LastOnTrackTick = HAL_GetTick();
-        }
-        
+
         // Get frequency.
         frequency = pidExe(&TrackingFrequencyPid,
                            clamp((tracking_measure), -1.0f, 1.0f), deltat) +
@@ -514,7 +490,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
 
         updateClockCircuitry(frequency, duty);
     }
-    else if (TrackingTriggered)
+    else if (TrackingTriggeredPreload)
     {
         updateClockCircuitry(PwmFrequency, PwmDuty);
     }
@@ -546,13 +522,14 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
             Complex_Copy(&MonitoringImpedance, &MonitoringImpedanceShadow);
             MonitoringFrequencyShadow = MonitoringFrequency;
             MonitoringLoadingShadow = MonitoringLoading;
+            MonitoringTriggeredShadow = TrackingTriggered;
 
-            // Set periodic measurement event.
-            Events |= EVENT_PERIODIC_MEASUREMENT;
+            // Set monitoring update event.
+            Events |= EVENT_MONITORING_UPDATE;
         }
     }
 
-    TrackingTriggeredLagged = TrackingTriggered;
+    TrackingTriggered = TrackingTriggeredPreload;
 }
 
 inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
@@ -610,7 +587,7 @@ inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
         float in;
         Complex_t vcalib;
         in = PwmFrequency / 1e4f;
-        
+
         Complex_PolyCalc(in, &CalPoly, &vcalib, CALIBRATION_POLY_DEGREE);
         Complex_Multiply(&v, &vcalib, &v);
     }
@@ -694,8 +671,8 @@ __weak void Core_SearchCompletedCallback(float resonanceFrequency, float resonan
 {
 }
 
-__weak void Core_PeriodicMeasurementCallback(float frequency, float duty,
-                                             Complex_t *power, Complex_t *impedance)
+__weak void Core_MonitoringCallback(Bool_t triggered, float frequency, float duty,
+                                    Complex_t *power, Complex_t *impedance)
 {
 }
 

@@ -89,9 +89,9 @@ static Cp_Trigger_t TriggerTable[] =
         {
             .name = "errdet-s",
             .params = {{.letter = 'N', .type = CP_PARAM_TYPE_REAL},
-                       {.letter = 'M', .type = CP_PARAM_TYPE_REAL},
-                       {.letter = 'V', .type = CP_PARAM_TYPE_REAL},
                        {.letter = 'X', .type = CP_PARAM_TYPE_REAL},
+                       {.letter = 'P', .type = CP_PARAM_TYPE_REAL},
+                       {.letter = 'F', .type = CP_PARAM_TYPE_REAL},
                        {.letter = 'T', .type = CP_PARAM_TYPE_REAL}},
             .callback = setErrorDetectionParametersCallback,
             .numOfParams = 5},
@@ -101,8 +101,7 @@ static Cp_Trigger_t TriggerTable[] =
             .name = "errdet-g",
             .params = {},
             .callback = getErrorDetectionParametersCallback,
-            .numOfParams = 0
-        },
+            .numOfParams = 0},
 
         // Set power tracking PID coefficients.
         {
@@ -439,10 +438,58 @@ void getSearchParametersCallback(Dictionary_t *params)
 
 void setErrorDetectionParametersCallback(Dictionary_t *params)
 {
+    float *min_horn_imp;
+    float *max_horn_imp;
+    float *power_track_tolerance;
+    float *freq_track_tolerance;
+    float *timeout;
+
+    // Parse parameters from the dictionary.
+    min_horn_imp = (float *)Dictionary_Get(params, 'N', NULL);
+    max_horn_imp = (float *)Dictionary_Get(params, 'X', NULL);
+    power_track_tolerance = (float *)Dictionary_Get(params, 'P', NULL);
+    freq_track_tolerance = (float *)Dictionary_Get(params, 'F', NULL);
+    timeout = (float *)Dictionary_Get(params, 'T', NULL);
+
+    // If all parameters parsed successfully, set parameters.
+    if (min_horn_imp && max_horn_imp && power_track_tolerance && freq_track_tolerance && timeout)
+    {
+        operationResult(Lattice_SetErrorDetectionParams(*min_horn_imp, *max_horn_imp,
+                                                        *power_track_tolerance, *freq_track_tolerance,
+                                                        *timeout));
+    }
+    else
+    {
+        operationResult(FALSE);
+    }
 }
 
 void getErrorDetectionParametersCallback(Dictionary_t *params)
 {
+    float min_horn_imp;
+    float max_horn_imp;
+    float power_track_tolerance;
+    float freq_track_tolerance;
+    float timeout;
+    char buff[128];
+    uint8_t length;
+    uint8_t ret;
+
+    if (Lattice_GetErrorDetectionParams(&min_horn_imp, &max_horn_imp, &power_track_tolerance,
+                                        &freq_track_tolerance, &timeout))
+    {
+        ret = 1;
+        length = snprintf(buff, "errdet-gr R%d N%f X%f P%f F%f T%f", sizeof(buff),
+                          ret, min_horn_imp, max_horn_imp, power_track_tolerance, 
+                          freq_track_tolerance, timeout);
+    }
+    else
+    {
+        ret = 0;
+        length = snprintf(buff, "errdet-gr R%d", sizeof(buff), ret);
+    }
+
+    Cli_SendMsg(buff, length);
 }
 
 void setPowerTrackingPidCoeffsCallback(Dictionary_t *params)
@@ -488,12 +535,7 @@ void getPowerTrackingPidCoeffsCallback(Dictionary_t *params)
         length = snprintf(buff, "prpid-gr R%d", sizeof(buff), ret);
     }
 
-    // Send response.
-    Rs485_Transmit(buff, length);
-
-    // Send line terminator.
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
+    Cli_SendMsg(buff, length);
 }
 
 void setFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
@@ -540,12 +582,7 @@ void getFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
         length = snprintf(buff, "frpid-gr R%d", sizeof(buff), ret);
     }
 
-    // Send response.
-    Rs485_Transmit(buff, length);
-
-    // Send line terminator.
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
+    Cli_SendMsg(buff, length);
 }
 
 void setDestinationPowerCallback(Dictionary_t *params)
@@ -585,8 +622,8 @@ void measureCallback(Dictionary_t *params)
 
 void resetCallback(Dictionary_t *params)
 {
-    Lattice_Reset();
     operationResult(TRUE);
+    Lattice_Reset();
 }
 
 void calibrateCallback(Dictionary_t *params)
@@ -603,12 +640,7 @@ void getStatusCallback(Dictionary_t *params)
     status = Lattice_GetStatus();
     length = snprintf(buff, "gstat-r S%d", sizeof(buff), status);
 
-    // Send response.
-    Rs485_Transmit(buff, length);
-
-    // Send line terminator.
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
+    Cli_SendMsg(buff, length);
 }
 
 void getErrorCallback(Dictionary_t *params)
@@ -620,10 +652,5 @@ void getErrorCallback(Dictionary_t *params)
     error = Lattice_GetError();
     length = snprintf(buff, "gerror-r E%d", sizeof(buff), error);
 
-    // Send response.
-    Rs485_Transmit(buff, length);
-
-    // Send line terminator.
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
+    Cli_SendMsg(buff, length);
 }

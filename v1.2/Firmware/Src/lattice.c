@@ -34,9 +34,9 @@ typedef struct
 {
     float minHornImpedance;
     float maxHornImpedance;
-    float trackingErrorTimeout;
-    float minOutputVoltage;
-    float maxOutputVoltage;
+    float powerTrackingTolerance;
+    float frequencyTrackingTolerance;
+    float timeout;
 } ErrorDetectionParams_t;
 
 typedef struct
@@ -48,6 +48,7 @@ typedef struct
     Bool_t errorDetectionParams : 1;
     Bool_t powerTrackingPidParams : 1;
     Bool_t frequencyTrackingPidParams : 1;
+    Bool_t monitoringPeriod : 1;
     Bool_t trackingDestinationPower : 1;
 } FactoryFlags_t;
 
@@ -57,13 +58,14 @@ enum
     EVENT_DESTINATION_POWER_SET = (1 << 1),
     EVENT_SCAN_COMPLETED = (1 << 2),
     EVENT_SEARCH_COMPLETED = (1 << 3),
-    EVENT_FACTORY_MODE = (1 << 4)
+    EVENT_FACTORY_MODE = (1 << 4),
+    EVENT_ERROR_OCCURRED = (1 << 5)
 };
 typedef uint8_t Events_t;
 
 /* Private variables -------------------------------------------------------*/
 // State machine variables.
-static Lattice_Status_t Status = LATTICE_STATUS_READY;
+static Lattice_Status_t Status = LATTICE_STATUS_FACTORY_CONFIG;
 static Lattice_Error_t Error;
 static Events_t Events;
 static FactoryFlags_t Flags;
@@ -76,15 +78,18 @@ static SearchingParams_t SearchingParams;
 static ErrorDetectionParams_t ErrorDetectionParams;
 static Pid_Params_t PowerTrackingPidParams;
 static Pid_Params_t FrequencyTrackingPidParams;
+static float MonitoringPeriod;
 static float TrackingDestinationPower; // User can overwrite the destination power.
 
 // Runtime variables.
 static float ResonanceFrequency;
 static float ResonanceImpedance;
 static float FullPower;
-static Bool_t MeasurementsEnabled;
-static float MeasurementPeriod;
-static Bool_t EepromUpdateTrackingDestPower;
+static Bool_t ReportingEnabled;
+static Bool_t PostponedDestPowerEepromWrite;
+static uint8_t HornImpedanceOutofWindowsSuccessiveErrors;
+static uint8_t PowerTrackingSuccessiveErrors;
+static uint8_t FrequencyTrackingSuccessiveErrors;
 
 // Impedance scanning store.
 static float ScanCalibrationResistance;
@@ -95,18 +100,19 @@ static float ScanImpedanceImg[CALIBRATION_NUM_OF_SAMPLES];
 int32_t hash(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor);
 void calculateCalibrationPolynomials(float *scanImpReal, float *scanImpImg,
                                      float calibrationResistance, Complex_t *coeffs);
+void startTracking(void);
 
 /* Exported functions ------------------------------------------------------*/
 void Lattice_Start(void)
 {
-    if (Status != LATTICE_STATUS_READY)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return;
     }
 
     Error = LATTICE_ERROR_NONE;
-    MeasurementsEnabled = FALSE;
-    EepromUpdateTrackingDestPower = FALSE;
+    ReportingEnabled = FALSE;
+    PostponedDestPowerEepromWrite = FALSE;
 
     // Load burned data.
     Flags.calibration = EepromEmulator_ReadObject(LATTICE_CALIBRATION_POLY_EEID, 0,
@@ -128,13 +134,17 @@ void Lattice_Start(void)
     Flags.frequencyTrackingPidParams = EepromEmulator_ReadObject(LATTICE_FREQUENCY_TRACKING_PID_PARAMS_EEID, 0,
                                                                  sizeof(FrequencyTrackingPidParams), NULL,
                                                                  &FrequencyTrackingPidParams);
+    Flags.monitoringPeriod = EepromEmulator_ReadObject(LATTICE_MONITORING_PERIOD_EEID, 0, sizeof(MonitoringPeriod),
+                                                       NULL, &MonitoringPeriod);
     Flags.trackingDestinationPower = EepromEmulator_ReadObject(LATTICE_TRACKING_DESTINATION_POWER_EEID, 0,
                                                                sizeof(TrackingDestinationPower), NULL,
                                                                &TrackingDestinationPower);
 
-    // Determine the state of device.
+    // Check if factory configuration completed. If it is, device can operate
+    //as configured. If not configured, put device into the factory mode.
     if (Flags.calibration && Flags.constraints && Flags.deviceInfo && Flags.searchingParams &&
-        Flags.powerTrackingPidParams && Flags.frequencyTrackingPidParams && Flags.trackingDestinationPower)
+        Flags.errorDetectionParams && Flags.powerTrackingPidParams && Flags.frequencyTrackingPidParams &&
+        Flags.monitoringPeriod && Flags.trackingDestinationPower)
     {
         Core_Init(&Calibration, LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY, Constraints.minLoading,
                   Constraints.maxLoading);
@@ -145,78 +155,67 @@ void Lattice_Start(void)
 
         Status = LATTICE_STATUS_OPERATING_SEARCHING;
     }
-    else
-    {
-        Status = LATTICE_STATUS_FACTORY_MODE;
-    }
 
     Events = 0;
 }
 
 void Lattice_Execute(void)
 {
-    if ((Status != LATTICE_STATUS_FACTORY_MODE) &&
-        (Status != LATTICE_STATUS_FACTORY_MODE_CALIBRATING) && \ 
-        (Status != LATTICE_STATUS_OPERATING_SEARCHING) &&
-        (Status != LATTICE_STATUS_OPERATING_TRACKING))
-    {
-        return;
-    }
-
     Core_Execute();
+
+    // If error occurred; core is stopped and device put
+    //into error mode.
+    if (Events & EVENT_ERROR_OCCURRED)
+    {
+        if ((Status == LATTICE_STATUS_OPERATING_SEARCHING) ||
+            (Status == LATTICE_STATUS_OPERATING_TRACKING))
+        {
+            Core_Stop();
+
+            Status = LATTICE_STATUS_ERROR;
+        }
+
+        Events ^= EVENT_ERROR_OCCURRED;
+    }
 
     // If factory mode event occurred.
     if (Events & EVENT_FACTORY_MODE)
     {
         // If core is operating stop the core.
         if ((Status == LATTICE_STATUS_OPERATING_SEARCHING) ||
-            (Status == LATTICE_STATUS_OPERATING_TRACKING))
+            (Status == LATTICE_STATUS_OPERATING_TRACKING) ||
+            (Status == LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING))
         {
             Core_Stop();
         }
 
         // Put device to pending factory initialization.
-        Status = LATTICE_STATUS_FACTORY_MODE;
+        Status = LATTICE_STATUS_FACTORY_CONFIG;
         Events ^= EVENT_FACTORY_MODE;
     }
 
     // If destination power is set.
     if (Events & EVENT_DESTINATION_POWER_SET)
     {
-        // If the device is at factory mode, there aren't any
-        //problem of writing to the eeprom emulator.
-        if (Status == LATTICE_STATUS_FACTORY_MODE)
-        {
-            EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
-                                       sizeof(TrackingDestinationPower),
-                                       &TrackingDestinationPower);
-
-            Flags.trackingDestinationPower = TRUE;
-        }
-
         // If the device is at tracking state; writing to the
         //eeprom emulator should interrupt the process.
         if (Status == LATTICE_STATUS_OPERATING_TRACKING)
         {
+            // Stop tracking.
             Core_Stop();
 
             EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
                                        sizeof(TrackingDestinationPower),
                                        &TrackingDestinationPower);
 
-            Flags.trackingDestinationPower = TRUE;
-
-            Core_Track(&PowerTrackingPidParams, &FrequencyTrackingPidParams, ResonanceFrequency,
-                       FullPower, TrackingDestinationPower, ErrorDetectionParams.trackingErrorTimeout);
-
-            Core_PeriodicMeasurements(MeasurementsEnabled, MeasurementPeriod);
+            // Start tracking.
+            startTracking();
         }
 
         // Postpone tracking power eeprom write operation.
-        if ((Status == LATTICE_STATUS_FACTORY_MODE_CALIBRATING) ||
-            (Status == LATTICE_STATUS_OPERATING_SEARCHING))
+        if (Status == LATTICE_STATUS_OPERATING_SEARCHING)
         {
-            EepromUpdateTrackingDestPower = TRUE;
+            PostponedDestPowerEepromWrite = TRUE;
         }
 
         Events ^= EVENT_DESTINATION_POWER_SET;
@@ -228,23 +227,17 @@ void Lattice_Execute(void)
         if (Status == LATTICE_STATUS_OPERATING_SEARCHING)
         {
             // Update tracking destination power if postponed.
-            if (EepromUpdateTrackingDestPower)
+            if (PostponedDestPowerEepromWrite)
             {
                 EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
                                            sizeof(TrackingDestinationPower),
                                            &TrackingDestinationPower);
 
-                Flags.trackingDestinationPower = TRUE;
-                EepromUpdateTrackingDestPower = FALSE;
+                PostponedDestPowerEepromWrite = FALSE;
             }
 
             // Start tracking.
-            Core_Track(&PowerTrackingPidParams, &FrequencyTrackingPidParams, ResonanceFrequency,
-                       FullPower, TrackingDestinationPower,
-                       ErrorDetectionParams.trackingErrorTimeout);
-
-            // Enable periodic measurements if set.
-            Core_PeriodicMeasurements(MeasurementsEnabled, MeasurementPeriod);
+            startTracking();
 
             Status = LATTICE_STATUS_OPERATING_TRACKING;
         }
@@ -255,7 +248,7 @@ void Lattice_Execute(void)
     // Handle calibration command event.
     if (Events & EVENT_CALIBRATE)
     {
-        if (Status == LATTICE_STATUS_FACTORY_MODE)
+        if (Status == LATTICE_STATUS_FACTORY_CONFIG)
         {
             Core_Init(NULL, LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY, 0.0f,
                       1.0f);
@@ -264,7 +257,7 @@ void Lattice_Execute(void)
             Core_Scan(LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY,
                       CALIBRATION_NUM_OF_SAMPLES, ScanImpedanceReal, ScanImpedanceImg);
 
-            Status = LATTICE_STATUS_FACTORY_MODE_CALIBRATING;
+            Status = LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING;
         }
 
         Events ^= EVENT_CALIBRATE;
@@ -273,7 +266,7 @@ void Lattice_Execute(void)
     // Handle scan completed event.
     if (Events & EVENT_SCAN_COMPLETED)
     {
-        if (Status == LATTICE_STATUS_FACTORY_MODE_CALIBRATING)
+        if (Status == LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING)
         {
             float coeffs_real[CALIBRATION_POLY_DEGREE + 1];
             float coeffs_img[CALIBRATION_POLY_DEGREE + 1];
@@ -282,25 +275,14 @@ void Lattice_Execute(void)
             calculateCalibrationPolynomials(ScanImpedanceReal, ScanImpedanceImg,
                                             ScanCalibrationResistance, coeffs);
 
-            // Update tracking destination power if postponed.
-            if (EepromUpdateTrackingDestPower)
-            {
-                EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
-                                           sizeof(TrackingDestinationPower),
-                                           &TrackingDestinationPower);
-
-                Flags.trackingDestinationPower = TRUE;
-                EepromUpdateTrackingDestPower = FALSE;
-            }
-
-            // Record object.
+           // Record object.
             EepromEmulator_WriteObject(LATTICE_CALIBRATION_POLY_EEID, sizeof(Calibration_t),
                                        (uint8_t *)&Calibration);
 
             Flags.calibration = TRUE;
 
             // Return to factory parameter setup.
-            Status = LATTICE_STATUS_FACTORY_MODE;
+            Status = LATTICE_STATUS_FACTORY_CONFIG;
         }
 
         // Clear scan completed event.
@@ -308,23 +290,10 @@ void Lattice_Execute(void)
     }
 }
 
-void Lattice_Stop(void)
-{
-    if ((Status != LATTICE_STATUS_FACTORY_MODE_CALIBRATING) &&
-        (Status != LATTICE_STATUS_FACTORY_MODE) &&
-        (Status != LATTICE_STATUS_OPERATING_SEARCHING) &&
-        (Status != LATTICE_STATUS_OPERATING_TRACKING))
-    {
-        return;
-    }
-
-    Status = LATTICE_STATUS_READY;
-}
-
 // Functions to manipulate factory data.
 Bool_t Lattice_SetConstraints(float maxPower, float minLoading, float maxLoading)
 {
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return FALSE;
     }
@@ -364,7 +333,7 @@ Bool_t Lattice_GetConstraints(float *maxPower, float *minLoading, float *maxLoad
 
 Bool_t Lattice_SetDeviceInfo(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
 {
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return FALSE;
     }
@@ -398,7 +367,7 @@ Bool_t Lattice_GetDeviceInfo(uint32_t *deviceId, uint16_t *versionMajor, uint16_
 
 Bool_t Lattice_SetSearchingParams(float normalizedPower, uint16_t steps)
 {
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return FALSE;
     }
@@ -436,24 +405,25 @@ Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps)
 }
 
 Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpedance,
-                                       float minOutputVoltage, float maxOutputVoltage,
-                                       float trackingErrorTimeout)
+                                       float powerTrackingTolerance, float frequencyTrackingTolerance,
+                                       float timeout)
 {
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return FALSE;
     }
 
     // Update error detection parameters.
     if (((0.0f < minHornImpedance) && (minHornImpedance < maxHornImpedance)) &&
-        ((0.0f < minOutputVoltage) && (minOutputVoltage < maxOutputVoltage)) &&
-        (0.0f < trackingErrorTimeout))
+        (0.0f < powerTrackingTolerance) && (0.0f < frequencyTrackingTolerance) && (0.0f < timeout))
     {
         ErrorDetectionParams.minHornImpedance = minHornImpedance;
         ErrorDetectionParams.maxHornImpedance = maxHornImpedance;
-        ErrorDetectionParams.minOutputVoltage = minOutputVoltage;
-        ErrorDetectionParams.maxOutputVoltage = maxOutputVoltage;
-        ErrorDetectionParams.trackingErrorTimeout = trackingErrorTimeout;
+        ErrorDetectionParams.powerTrackingTolerance = powerTrackingTolerance;
+        ErrorDetectionParams.frequencyTrackingTolerance = frequencyTrackingTolerance;
+        ErrorDetectionParams.timeout = timeout;
+
+        Flags.errorDetectionParams = TRUE;
 
         EepromEmulator_WriteObject(LATTICE_ERROR_DETECTION_PARAMS_EEID, sizeof(ErrorDetectionParams),
                                    &ErrorDetectionParams);
@@ -469,8 +439,8 @@ Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpe
 }
 
 Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
-                                       float *minOutputVoltage, float *maxOutputVoltage,
-                                       float *trackingErrorTimeout)
+                                       float *powerTrackingTolerance, float *frequencyTrackingTolerance,
+                                       float *timeout)
 {
     if (!Flags.errorDetectionParams)
     {
@@ -479,16 +449,48 @@ Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornIm
 
     *minHornImpedance = ErrorDetectionParams.minHornImpedance;
     *maxHornImpedance = ErrorDetectionParams.maxHornImpedance;
-    *minOutputVoltage = ErrorDetectionParams.minOutputVoltage;
-    *maxOutputVoltage = ErrorDetectionParams.maxOutputVoltage;
-    *trackingErrorTimeout = ErrorDetectionParams.trackingErrorTimeout;
+    *powerTrackingTolerance = ErrorDetectionParams.powerTrackingTolerance;
+    *frequencyTrackingTolerance = ErrorDetectionParams.frequencyTrackingTolerance;
+    *timeout = ErrorDetectionParams.timeout;
+
+    return TRUE;
+}
+
+Bool_t Lattice_SetMonitoringPeriod(float period)
+{
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
+    {
+        return FALSE;
+    }
+
+    if (period > 0.0f)
+    {
+        MonitoringPeriod = period;
+        Flags.monitoringPeriod = TRUE;
+
+        EepromEmulator_WriteObject(LATTICE_MONITORING_PERIOD_EEID, sizeof(MonitoringPeriod),
+                                   &MonitoringPeriod);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+Bool_t Lattice_GetMonitoringPeriod(float *period)
+{
+    if (!Flags.monitoringPeriod)
+    {
+        return FALSE;
+    }
+
+    *period = MonitoringPeriod;
 
     return TRUE;
 }
 
 Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf)
 {
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return FALSE;
     }
@@ -500,11 +502,11 @@ Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf)
         PowerTrackingPidParams.kd = kd;
         PowerTrackingPidParams.tfilt = tf;
 
+        Flags.powerTrackingPidParams = TRUE;
+
         EepromEmulator_WriteObject(LATTICE_POWER_TRACKING_PID_PARAMS_EEID,
                                    sizeof(Pid_Params_t),
                                    &PowerTrackingPidParams);
-
-        Flags.powerTrackingPidParams = TRUE;
 
         return TRUE;
     }
@@ -533,7 +535,7 @@ Bool_t Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float 
 
 Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float tf)
 {
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return FALSE;
     }
@@ -545,11 +547,12 @@ Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float
         FrequencyTrackingPidParams.kd = kd;
         FrequencyTrackingPidParams.tfilt = tf;
 
+        Flags.frequencyTrackingPidParams = TRUE;
+
         EepromEmulator_WriteObject(LATTICE_FREQUENCY_TRACKING_PID_PARAMS_EEID,
                                    sizeof(Pid_Params_t),
                                    &FrequencyTrackingPidParams);
 
-        Flags.frequencyTrackingPidParams = TRUE;
         return TRUE;
     }
     else
@@ -591,7 +594,7 @@ Bool_t Lattice_FactoryMode(int32_t password)
     }
 
     // If not in factory mode, trigger event.
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         Events |= EVENT_FACTORY_MODE;
     }
@@ -601,7 +604,7 @@ Bool_t Lattice_FactoryMode(int32_t password)
 
 Bool_t Lattice_Calibrate(void)
 {
-    if (Status != LATTICE_STATUS_FACTORY_MODE)
+    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
         return FALSE;
     }
@@ -619,25 +622,42 @@ void Lattice_Reset(void)
 
 Bool_t Lattice_SetDestinationPower(float destinationPower)
 {
-    if (Flags.constraints)
+    if (!((Status == LATTICE_STATUS_FACTORY_CONFIG) ||
+          (Status == LATTICE_STATUS_OPERATING_SEARCHING) ||
+          (Status == LATTICE_STATUS_OPERATING_TRACKING)))
     {
-        if ((0.0f < destinationPower) && (destinationPower <= Constraints.maxPower))
-        {
-            TrackingDestinationPower = destinationPower;
-            Events |= EVENT_DESTINATION_POWER_SET;
+        return FALSE;
+    }
 
-            return TRUE;
+    if (0.0f < destinationPower)
+    {
+        TrackingDestinationPower = destinationPower;
+        Flags.trackingDestinationPower = TRUE;
+
+        // If the device is at factory mode, there aren't any
+        //problem of writing to the eeprom emulator.
+        if (Status == LATTICE_STATUS_FACTORY_CONFIG)
+        {
+            EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
+                                       sizeof(TrackingDestinationPower),
+                                       &TrackingDestinationPower);
         }
         else
         {
-            return FALSE;
+            Events |= EVENT_DESTINATION_POWER_SET;    
         }
+        
+        return TRUE;
+    }
+    else
+    {
+        return FALSE;
     }
 
     return TRUE;
 }
 
-Bool_t Lattice_Measure(Bool_t isOn, float measurementPeriod)
+Bool_t Lattice_Report(Bool_t isOn)
 {
     if ((Status != LATTICE_STATUS_OPERATING_SEARCHING) &&
         (Status != LATTICE_STATUS_OPERATING_TRACKING))
@@ -645,28 +665,8 @@ Bool_t Lattice_Measure(Bool_t isOn, float measurementPeriod)
         return FALSE;
     }
 
-    if (isOn)
-    {
-        if (measurementPeriod > 0.0f)
-        {
-            MeasurementsEnabled = TRUE;
-            MeasurementPeriod = measurementPeriod;
-            Core_PeriodicMeasurements(MeasurementsEnabled, MeasurementPeriod);
-
-            return TRUE;
-        }
-        else
-        {
-            return FALSE;
-        }
-    }
-    else
-    {
-        MeasurementsEnabled = FALSE;
-        MeasurementPeriod = __FLT_MAX__;
-        Core_PeriodicMeasurements(MeasurementsEnabled, __FLT_MAX__);
-        return TRUE;
-    }
+    ReportingEnabled = isOn;
+    return TRUE;
 }
 
 Lattice_Status_t Lattice_GetStatus(void)
@@ -680,6 +680,21 @@ Lattice_Error_t Lattice_GetError(void)
 }
 
 /* Private functions -------------------------------------------------------*/
+void startTracking(void)
+{
+    // Start tracking.
+    Core_Track(&PowerTrackingPidParams, &FrequencyTrackingPidParams, ResonanceFrequency,
+               FullPower, TrackingDestinationPower);
+
+    // Clear error counters.
+    HornImpedanceOutofWindowsSuccessiveErrors = 0;
+    PowerTrackingSuccessiveErrors = 0;
+    FrequencyTrackingSuccessiveErrors = 0;
+
+    // Enable periodic measurements if set.
+    Core_PeriodicMeasurements(TRUE, MonitoringPeriod);
+}
+
 int32_t hash(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
 {
     uint64_t tmp;
@@ -736,16 +751,91 @@ void Core_SearchCompletedCallback(float resonanceFrequency, float resonanceImped
     Events |= EVENT_SEARCH_COMPLETED;
 }
 
-void Core_PeriodicMeasurementCallback(float frequency, float duty,
-                                      Complex_t *power, Complex_t *impedance)
+void Core_MonitoringCallback(Bool_t triggered, float frequency, float duty,
+                             Complex_t *power, Complex_t *impedance)
 {
-    char buff[64];
-    uint8_t length;
-    length = snprintf(buff, sizeof(buff), "meas F%f D%f P%f I%f M%f J%f",
-                      frequency, duty, power->real, power->img,
-                      impedance->real, impedance->img);
+    char buff[128];
+    uint8_t length = 0;
 
-    // Transmit measurement.
+    // Check for errors only if triggered.
+    if (triggered)
+    {
+        float tracking_measure, horn_imp;
+        tracking_measure = fabsf(power->img / power->real);
+        horn_imp = sqrtf(Complex_NormSqr(impedance));
+
+        // Check if horn impedance is acceptable.
+        //If not increase successive error counter. If so clear the error counter.
+        if ((horn_imp < ErrorDetectionParams.minHornImpedance) ||
+            (horn_imp > ErrorDetectionParams.maxHornImpedance))
+        {
+            HornImpedanceOutofWindowsSuccessiveErrors++;
+        }
+        else
+        {
+            HornImpedanceOutofWindowsSuccessiveErrors = 0;
+        }
+
+        // Check if frequency tracking keeps the tracking measure acceptable.
+        //If not increase successive error counter. If so clear the error counter.
+        if ((tracking_measure > ErrorDetectionParams.frequencyTrackingTolerance) ||
+            (tracking_measure < -ErrorDetectionParams.frequencyTrackingTolerance))
+        {
+            FrequencyTrackingSuccessiveErrors++;
+        }
+        else
+        {
+            FrequencyTrackingSuccessiveErrors = 0;
+        }
+
+        // Check if power tracking keeps the power level acceptable.
+        //If not increase successive error counter. If so clear the error counter.
+        if (power->real > (TrackingDestinationPower * (1.0f + ErrorDetectionParams.powerTrackingTolerance)) ||
+            power->real < (TrackingDestinationPower * (1.0f - ErrorDetectionParams.powerTrackingTolerance)))
+        {
+            PowerTrackingSuccessiveErrors++;
+        }
+        else
+        {
+            PowerTrackingSuccessiveErrors = 0;
+        }
+
+        // Calculate maximum number of successive errors.
+        uint8_t max_successive_errors;
+        max_successive_errors = (uint8_t)((ErrorDetectionParams.timeout / MonitoringPeriod) + 0.5f);
+
+        // Check if any type of error counter has exceeded the maximum number of errors.
+        if (HornImpedanceOutofWindowsSuccessiveErrors > max_successive_errors)
+        {
+            length = snprintf(buff, sizeof(buff), "errhimp I%.1f", horn_imp);
+
+            Error = LATTICE_ERROR_HORN_IMPEDANCE_OUT_OF_WINDOW;
+            Events |= EVENT_ERROR_OCCURRED;
+        }
+        else if (FrequencyTrackingSuccessiveErrors > max_successive_errors)
+        {
+            length = snprintf(buff, sizeof(buff), "errftra M%.2f", tracking_measure);
+            Error = LATTICE_ERROR_FREQUENCY_TRACKING_FAILURE;
+            Events |= EVENT_ERROR_OCCURRED;
+        }
+        else if (PowerTrackingSuccessiveErrors > max_successive_errors)
+        {
+            length = snprintf(buff, sizeof(buff), "errptra P%.1f", power->real);
+            Error = LATTICE_ERROR_POWER_TRACKING_FAILURE;
+            Events |= EVENT_ERROR_OCCURRED;
+        }
+    }
+
+    // If reporting is enabled and error didn't occur send report message.
+    if (ReportingEnabled && !length)
+    {
+        uint8_t trg;
+        trg = triggered ? 1 : 0;
+        length = snprintf(buff, sizeof(buff), "report T%d F%.0f D%.2f P%.1f I%.1f M%.1f J%.1f",
+                          trg, frequency, duty, power->real, power->img,
+                          impedance->real, impedance->img);
+    }
+
     Cli_SendMsg(buff, length);
 }
 

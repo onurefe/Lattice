@@ -2,7 +2,6 @@
 #define __CONFIG_H
 
 /* Exported constants ------------------------------------------------------*/
-#define LATTICE_AUTHORIZATION_TIMEOUT_IN_MS (600U * 1000U)
 #define LATTICE_HASH_OFFSET 11199522U
 #define LATTICE_HASH_DIVISOR 0x97F56F91U
 
@@ -19,11 +18,11 @@
 #define CALIBRATION_NUM_OF_SAMPLES 100
 
 // RS485 module configuration.
-#define RS485_RX_BUFFER_SIZE 128
-#define RS485_TX_BUFFER_SIZE 128
+#define RS485_RX_BUFFER_SIZE 256
+#define RS485_TX_BUFFER_SIZE 256
 
 // CLI module configuration.
-#define CLI_MAX_COMMAND_LINE_LENGTH 64
+#define CLI_MAX_COMMAND_LINE_LENGTH 128
 #define CLI_LINE_TERMINATOR \
     {                       \
         '\n', '\r'          \
