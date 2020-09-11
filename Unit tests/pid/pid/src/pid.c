@@ -1,30 +1,6 @@
-#ifndef __PID_H
-#define __PID_H
+#include "../inc/pid.h"
 
-#include "global.h"
-
-/* Exported types ----------------------------------------------------------*/
-typedef struct
-{
-    float kp;
-    float ki;
-    float kd;
-    float tfilt;
-} Pid_Params_t;
-
-typedef struct
-{
-    float kp;
-    float ki;
-    float kd;
-    float tf;
-    float lastInput;
-    float integral;
-    float minVal;
-    float maxVal;
-} Pid_t;
-
-/* Inline functions --------------------------------------------------------*/
+/* Exported functions ------------------------------------------------------*/
 /***
  * @brief Sets up the PID block.
  * 
@@ -33,7 +9,7 @@ typedef struct
  * @param minVal: Minimum output value.
  * @param maxVal: Maximum output value.
  */
-inline void Pid_Setup(Pid_t *pid, Pid_Params_t *params, float minVal, float maxVal)
+void Pid_Setup(Pid_t *pid, Pid_Params_t *params, float minVal, float maxVal)
 {
     pid->kp = params->kp;
     pid->ki = params->ki;
@@ -54,14 +30,14 @@ inline void Pid_Setup(Pid_t *pid, Pid_Params_t *params, float minVal, float maxV
  * 
  * @retval Output signal.
  */
-inline float Pid_Exe(Pid_t *pid, float input, float dt)
+float Pid_Exe(Pid_t *pid, float input, float dt)
 {
     float cfilt;
     float in;
     float out;
 
     // Calculate input filter coefficient.
-    cfilt = dt / pid->tf;
+    cfilt = dt / (dt + pid->tf);
 
     // Calculate filtered input.
     in = (1.0f - cfilt) * pid->lastInput + cfilt * input;
@@ -95,4 +71,13 @@ inline float Pid_Exe(Pid_t *pid, float input, float dt)
     return out;
 }
 
-#endif
+/***
+ * @brief Resets the PID module.
+ * 
+ * @param pid: Pointer to the PID module.
+ */
+void Pid_Reset(Pid_t *pid)
+{
+    pid->integral = 0.0f;
+    pid->lastInput = 0.0f;
+}

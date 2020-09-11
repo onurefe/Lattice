@@ -1,5 +1,5 @@
-#include "polyreg.h"
-#include "matrix.h"
+#include "../inc/polyreg.h"
+#include "../inc/matrix.h"
 
 /* Private variables -------------------------------------------------------*/
 // Polynomial fitting Matrix (X^T * X)^-1 X^T from degree 2, 100 samples with equal intervals
