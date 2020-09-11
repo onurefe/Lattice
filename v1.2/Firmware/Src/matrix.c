@@ -3,6 +3,15 @@
 #define SIZE MAX_SQUARE_MATRIX_SIZE
 
 /* Exported functions ------------------------------------------------------*/
+/***
+ * @brief Multiplies two matrices and puts the result in R.
+ * 
+ * @param A: Pointer to the first matrix.
+ * @param B: Pointer to the second matrix.
+ * @param R: Pointer to resultant matrix.
+ * 
+ * @retval: Operation result. TRUE or FALSE(for invalid operation).
+ */
 Bool_t Matrix_Multiply(Matrix_t *A, Matrix_t *B, Matrix_t *R)
 {
     uint16_t i, j, k;
@@ -33,6 +42,12 @@ Bool_t Matrix_Multiply(Matrix_t *A, Matrix_t *B, Matrix_t *R)
     return TRUE;
 }
 
+/***
+ * @brief Transposes given matrix.
+ * 
+ * @param A: Input matrix.
+ * @param R: Output matrix.
+ */
 void Matrix_Transpose(Matrix_t *A, Matrix_t *R)
 {
     float temp;
@@ -62,6 +77,14 @@ void Matrix_Transpose(Matrix_t *A, Matrix_t *R)
     R->n = A->m;
 }
 
+/***
+ * @brief Takes the multiplicative inverse of a square matrix.
+ * 
+ * @param A: Matrix to be inverted.
+ * @param R: Resultant matrix.
+ * 
+ * @retval TRUE or FALSE.
+ */
 Bool_t Matrix_Inverse(Matrix_t *A, Matrix_t *R)
 {
     float ratio;

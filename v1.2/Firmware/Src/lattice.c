@@ -103,6 +103,10 @@ void calculateCalibrationPolynomials(float *scanImpReal, float *scanImpImg,
 void startTracking(void);
 
 /* Exported functions ------------------------------------------------------*/
+/***
+ * @brief Starts the lattice module. Starting includes loading ROM data
+ * and initializing the state variables.
+ */
 void Lattice_Start(void)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -155,10 +159,18 @@ void Lattice_Start(void)
 
         Status = LATTICE_STATUS_OPERATING_SEARCHING;
     }
+    else
+    {
+        Core_Init(NULL, LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY, 0.0f,
+                  1.0f);
+    }
 
     Events = 0;
 }
 
+/***
+ * @brief Handles pending events and executes submodules.
+ */
 void Lattice_Execute(void)
 {
     Core_Execute();
@@ -250,9 +262,6 @@ void Lattice_Execute(void)
     {
         if (Status == LATTICE_STATUS_FACTORY_CONFIG)
         {
-            Core_Init(NULL, LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY, 0.0f,
-                      1.0f);
-
             // Start scanning.
             Core_Scan(LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY,
                       CALIBRATION_NUM_OF_SAMPLES, ScanImpedanceReal, ScanImpedanceImg);
@@ -275,7 +284,7 @@ void Lattice_Execute(void)
             calculateCalibrationPolynomials(ScanImpedanceReal, ScanImpedanceImg,
                                             ScanCalibrationResistance, coeffs);
 
-           // Record object.
+            // Record object.
             EepromEmulator_WriteObject(LATTICE_CALIBRATION_POLY_EEID, sizeof(Calibration_t),
                                        (uint8_t *)&Calibration);
 
@@ -290,7 +299,15 @@ void Lattice_Execute(void)
     }
 }
 
-// Functions to manipulate factory data.
+/***
+ * @brief Sets constraint variables which the device should obey.
+ * 
+ * @param maxPower: Maximum power which device can deliver.
+ * @param minLoading: Minimum loading value. From 0.0 to 1.0
+ * @param maxLoading: Maximum loading value. From 0.0 to 1.0
+ * 
+ * @retval Operation result; either TRUE or FALSE.
+ */
 Bool_t Lattice_SetConstraints(float maxPower, float minLoading, float maxLoading)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -315,6 +332,15 @@ Bool_t Lattice_SetConstraints(float maxPower, float minLoading, float maxLoading
     }
 }
 
+/***
+ * @brief Gets constraint variables.
+ * 
+ * @param maxPower: Pointer to return maximum power.
+ * @param minLoading: Pointer to return minimum loading.
+ * @param maxLoading: Pointer to return maximum loading.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_GetConstraints(float *maxPower, float *minLoading, float *maxLoading)
 {
     if (Flags.constraints)
@@ -331,6 +357,15 @@ Bool_t Lattice_GetConstraints(float *maxPower, float *minLoading, float *maxLoad
     }
 }
 
+/***
+ * @brief Sets device info variables.
+ * 
+ * @param deviceId: Id of the device.
+ * @param versionMajor: Firmware major version.
+ * @param versionMinor: Firmware minor version.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_SetDeviceInfo(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -349,6 +384,15 @@ Bool_t Lattice_SetDeviceInfo(uint32_t deviceId, uint16_t versionMajor, uint16_t 
     return TRUE;
 }
 
+/***
+ * @brief Gets the device info variables.
+ * 
+ * @param deviceId: Pointer to return the device id.
+ * @param versionMajor: Pointer to return the firmware major version.
+ * @param versiomMinor: Pointer to return the firmware minor version.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_GetDeviceInfo(uint32_t *deviceId, uint16_t *versionMajor, uint16_t *versionMinor)
 {
     if (Flags.deviceInfo)
@@ -365,6 +409,16 @@ Bool_t Lattice_GetDeviceInfo(uint32_t *deviceId, uint16_t *versionMajor, uint16_
     }
 }
 
+/***
+ * @brief Sets the searching task parameters.
+ * 
+ * @param normalizedPower: Normalized power. Between 0 to 1. This value
+ * represents an arbitrary power unit which 1.0 meaning all the power 
+ * device can deliver to the current load.
+ * @param steps: Determines the searching resolution.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_SetSearchingParams(float normalizedPower, uint16_t steps)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -389,6 +443,14 @@ Bool_t Lattice_SetSearchingParams(float normalizedPower, uint16_t steps)
     }
 }
 
+/***
+ * @brief Gets searching parameters.
+ * 
+ * @param normalizedPower: Pointer to return the normalized searching power.
+ * @param steps: Point to return the number of steps.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps)
 {
     if (Flags.searchingParams)
@@ -404,6 +466,18 @@ Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps)
     }
 }
 
+/***
+ * @brief Sets error detection parameters.
+ * 
+ * @param minHornImpedance: Acceptable minimum impedance of the horn.
+ * @param maxHornImpedance: Acceptable maximum impedance of the horn.
+ * @param powerTrackingTolerance: Tolerance of the power tracking algorithm. 
+ * @param frequencyTrackingTolerance: Tolerance of the frequency tracking algorithm.
+ * @param timeout: Timeout value in seconds. This some value is out of the acceptable 
+ * boundaries for <timeout> number of seconds; error will be invoked.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpedance,
                                        float powerTrackingTolerance, float frequencyTrackingTolerance,
                                        float timeout)
@@ -438,6 +512,17 @@ Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpe
     return TRUE;
 }
 
+/***
+ * @brief Gets error detection parameters.
+ * 
+ * @param minHornImpedance: Pointer to return minimum horn impedance.
+ * @param maxHornImpedance: Pointer to return maximum horn impedance.
+ * @param powerTrackingTolerance: Pointer to return power tracking tolerance.
+ * @param frequencyTrackingTolerance: Pointer to return frequency tracking tolerance.
+ * @param timeout: Pointer to return timeout value.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
                                        float *powerTrackingTolerance, float *frequencyTrackingTolerance,
                                        float *timeout)
@@ -456,6 +541,13 @@ Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornIm
     return TRUE;
 }
 
+/***
+ * @brief Sets the monitoring period(error detection system).
+ * 
+ * @param period: Period of error checking and reporting(if enabled).
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_SetMonitoringPeriod(float period)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -476,6 +568,13 @@ Bool_t Lattice_SetMonitoringPeriod(float period)
     return FALSE;
 }
 
+/***
+ * @brief Gets the monitoring period.
+ * 
+ * @param period: Pointer to return the monitoring period.
+ *
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_GetMonitoringPeriod(float *period)
 {
     if (!Flags.monitoringPeriod)
@@ -488,6 +587,16 @@ Bool_t Lattice_GetMonitoringPeriod(float *period)
     return TRUE;
 }
 
+/***
+ * @brief Gets power tracking PID coefficients.
+ * 
+ * @param kp: Proportional value.
+ * @param ki: Integral operator coefficient.
+ * @param kd: Derivative operator coefficient.
+ * @param tf: Input filter time constant.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -516,6 +625,16 @@ Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf)
     }
 }
 
+/***
+ * @brief Gets power tracking PID coefficients.
+ * 
+ * @param kp: Pointer to return the proportional value.
+ * @param ki: Pointer to return the integral operator coefficient.
+ * @param kd: Pointer to return the derivative operator coefficient.
+ * @param tf: Pointer to return the input filter time constant.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf)
 {
     if (Flags.powerTrackingPidParams)
@@ -533,6 +652,16 @@ Bool_t Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float 
     }
 }
 
+/***
+ * @brief Sets frequency tracking PID coefficients.
+ * 
+ * @param kp: Proportional value.
+ * @param ki: Integral operator coefficient.
+ * @param kd: Derivative operator coefficient.
+ * @param tf: Input filter time constant.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float tf)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -561,6 +690,16 @@ Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float
     }
 }
 
+/***
+ * @brief Gets frequency tracking PID coefficients.
+ * 
+ * @param kp: Pointer to return proportional value.
+ * @param ki: Pointer to return integral operator's coefficient.
+ * @param kd: Pointer to return derivative operator's coefficient.
+ * @param tf: Pointer to return input filter's time constant.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_GetFrequencyTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf)
 {
     if (Flags.frequencyTrackingPidParams)
@@ -578,6 +717,14 @@ Bool_t Lattice_GetFrequencyTrackingPidCoeffs(float *kp, float *ki, float *kd, fl
     }
 }
 
+/***
+ * @brief Puts the device into the factory mode.
+ * 
+ * @param password: Password generated by the hash function with device 
+ * information.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_FactoryMode(int32_t password)
 {
     // If device info is not set; the device is already authorized.
@@ -602,6 +749,11 @@ Bool_t Lattice_FactoryMode(int32_t password)
     return TRUE;
 }
 
+/***
+ * @brief Invokes calibration procedure.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_Calibrate(void)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
@@ -614,12 +766,22 @@ Bool_t Lattice_Calibrate(void)
     return TRUE;
 }
 
+/***
+ * @brief Soft resets the system.
+ */
 void Lattice_Reset(void)
 {
     // Reset the system.
     HAL_NVIC_SystemReset();
 }
 
+/***
+ * @brief Sets the destination power(used in tracking mode).
+ * 
+ * @param destinationPower: Destination power.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_SetDestinationPower(float destinationPower)
 {
     if (!((Status == LATTICE_STATUS_FACTORY_CONFIG) ||
@@ -644,9 +806,9 @@ Bool_t Lattice_SetDestinationPower(float destinationPower)
         }
         else
         {
-            Events |= EVENT_DESTINATION_POWER_SET;    
+            Events |= EVENT_DESTINATION_POWER_SET;
         }
-        
+
         return TRUE;
     }
     else
@@ -657,6 +819,32 @@ Bool_t Lattice_SetDestinationPower(float destinationPower)
     return TRUE;
 }
 
+/***
+ * @brief Gets the destination power(used in tracking mode).
+ * 
+ * @param destinationPower: Pointer to return destination power.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
+Bool_t Lattice_GetDestinationPower(float *destinationPower)
+{
+    if (Flags.trackingDestinationPower)
+    {
+        *destinationPower = TrackingDestinationPower;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/***
+ * @brief Turns on or off the reporting. Reporting reports the tracking 
+ * information.
+ * 
+ * @param isOn: TRUE if tracking is on, vice versa.
+ * 
+ * @retval Operation result: either TRUE or FALSE.
+ */
 Bool_t Lattice_Report(Bool_t isOn)
 {
     if ((Status != LATTICE_STATUS_OPERATING_SEARCHING) &&
@@ -669,32 +857,51 @@ Bool_t Lattice_Report(Bool_t isOn)
     return TRUE;
 }
 
+/***
+ * @brief Returns the status of the module.
+ * 
+ * @retval Status.
+ */
 Lattice_Status_t Lattice_GetStatus(void)
 {
     return Status;
 }
 
+/***
+ * @brief Returns the error code.
+ * 
+ * @retval Error.
+ */
 Lattice_Error_t Lattice_GetError(void)
 {
     return Error;
 }
 
 /* Private functions -------------------------------------------------------*/
+/***
+ * @brief Starts tracking.
+ */
 void startTracking(void)
 {
     // Start tracking.
     Core_Track(&PowerTrackingPidParams, &FrequencyTrackingPidParams, ResonanceFrequency,
-               FullPower, TrackingDestinationPower);
+               FullPower, TrackingDestinationPower, MonitoringPeriod);
 
     // Clear error counters.
     HornImpedanceOutofWindowsSuccessiveErrors = 0;
     PowerTrackingSuccessiveErrors = 0;
     FrequencyTrackingSuccessiveErrors = 0;
-
-    // Enable periodic measurements if set.
-    Core_PeriodicMeasurements(TRUE, MonitoringPeriod);
 }
 
+/***
+ * @brief Generated signed integer by using device info parameters.
+ * 
+ * @param deviceId: Id of the device.
+ * @param versionMajor: Firmware version(major).
+ * @param versionMinor: Firmware version(minor).
+ * 
+ * @retval Some signed integer.
+ */
 int32_t hash(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
 {
     uint64_t tmp;
@@ -703,6 +910,15 @@ int32_t hash(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
     return ((tmp + LATTICE_HASH_OFFSET) % LATTICE_HASH_DIVISOR);
 }
 
+/***
+ * @brief Calculates the calibration polynomial coefficients from the impedance
+ * curve of the calibration element.
+ * 
+ * @param scanImpReal: Element's impedance phasor curve's real part.
+ * @param scanImpImg: Element's impedance phasor curve's imaginary part.
+ * @param calibrationResistance: Calibration element's resistance.
+ * @param coeffs: Pointer to return the regression polynomial coefficients.
+ */
 void calculateCalibrationPolynomials(float *scanImpReal, float *scanImpImg,
                                      float calibrationResistance, Complex_t *coeffs)
 {
@@ -735,12 +951,67 @@ void calculateCalibrationPolynomials(float *scanImpReal, float *scanImpImg,
     }
 }
 
-/* Callback functions ------------------------------------------------------*/
+/* Exported callbacks ------------------------------------------------------*/
+/***
+ * @brief Gets triggered when horn impedance is not between limits for 
+ * <timeout> seconds.
+ * 
+ * @param hornImpedance: Impedance of the horn.
+ */
+__weak void Lattice_HornImpedanceOutofWindowCallback(float hornImpedance)
+{
+}
+
+/***
+ * @brief Gets triggered when frequency is not between limits for 
+ * <timeout> seconds.
+ * 
+ * @param trackingMeasure: Tracking measure value.
+ */
+__weak void Lattice_FrequencyTrackingFailureCallback(float trackingMeasure)
+{
+}
+
+/***
+ * @brief Gets triggered when power is not between limits for 
+ * <timeout> seconds.
+ * 
+ * @param power: Power transmitted to the horn.
+ */
+__weak void Lattice_PowerTrackingFailureCallback(float power)
+{
+}
+
+/***
+ * @brief Gets triggered at every monitoring event if reporting flag is
+ * set. 
+ * @param triggered: If the device is triggered(power output enabled) or not.
+ * @param frequency: Current drive frequency.
+ * @param duty: Current driver duty.
+ * @param power: Complex power transmitted to the horn.
+ * @param impedance: Complex impedance of the horn.
+ */
+__weak void Lattice_ReportingCallback(Bool_t triggered, float frequency, float duty,
+                                      Complex_t *power, Complex_t *impedance)
+{
+}
+
+/* Imported callbacks ------------------------------------------------------*/
+/***
+ * @brief Gets triggered when scan process is completed.
+ */
 void Core_ScanCompletedCallback(void)
 {
     Events |= EVENT_SCAN_COMPLETED;
 }
 
+/***
+ * @brief Gets triggered when search is completed.
+ * 
+ * @param resonanceFrequency: Detected resonance frequency.
+ * @param resonanceImpedance: Impedance at the resonance frequency.
+ * @param fullPower: Maximum power transmittable at resonance frequency.
+ */
 void Core_SearchCompletedCallback(float resonanceFrequency, float resonanceImpedance,
                                   float fullPower)
 {
@@ -751,12 +1022,18 @@ void Core_SearchCompletedCallback(float resonanceFrequency, float resonanceImped
     Events |= EVENT_SEARCH_COMPLETED;
 }
 
+/***
+ * @brief Gets triggered when monitoring event occurrs. 
+ * 
+ * @param triggered: Flag showing if triggered or not.
+ * @param frequency: Tracking frequency.
+ * @param duty: Tracking duty.
+ * @param power: Power transmitted to the horn.
+ * @param impedance: Impedance of the horn.
+ */
 void Core_MonitoringCallback(Bool_t triggered, float frequency, float duty,
                              Complex_t *power, Complex_t *impedance)
 {
-    char buff[128];
-    uint8_t length = 0;
-
     // Check for errors only if triggered.
     if (triggered)
     {
@@ -807,38 +1084,39 @@ void Core_MonitoringCallback(Bool_t triggered, float frequency, float duty,
         // Check if any type of error counter has exceeded the maximum number of errors.
         if (HornImpedanceOutofWindowsSuccessiveErrors > max_successive_errors)
         {
-            length = snprintf(buff, sizeof(buff), "errhimp I%.1f", horn_imp);
+            Lattice_HornImpedanceOutofWindowCallback(horn_imp);
 
             Error = LATTICE_ERROR_HORN_IMPEDANCE_OUT_OF_WINDOW;
             Events |= EVENT_ERROR_OCCURRED;
         }
         else if (FrequencyTrackingSuccessiveErrors > max_successive_errors)
         {
-            length = snprintf(buff, sizeof(buff), "errftra M%.2f", tracking_measure);
+            Lattice_FrequencyTrackingFailureCallback(tracking_measure);
+
             Error = LATTICE_ERROR_FREQUENCY_TRACKING_FAILURE;
             Events |= EVENT_ERROR_OCCURRED;
         }
         else if (PowerTrackingSuccessiveErrors > max_successive_errors)
         {
-            length = snprintf(buff, sizeof(buff), "errptra P%.1f", power->real);
+            Lattice_PowerTrackingFailureCallback(power->real);
+
             Error = LATTICE_ERROR_POWER_TRACKING_FAILURE;
             Events |= EVENT_ERROR_OCCURRED;
         }
     }
 
     // If reporting is enabled and error didn't occur send report message.
-    if (ReportingEnabled && !length)
+    if (ReportingEnabled && (Error == LATTICE_ERROR_NONE))
     {
-        uint8_t trg;
-        trg = triggered ? 1 : 0;
-        length = snprintf(buff, sizeof(buff), "report T%d F%.0f D%.2f P%.1f I%.1f M%.1f J%.1f",
-                          trg, frequency, duty, power->real, power->img,
-                          impedance->real, impedance->img);
+        Lattice_ReportingCallback(triggered, frequency, duty, power, impedance);
     }
-
-    Cli_SendMsg(buff, length);
 }
 
+/***
+ * @brief EXTI callback implementation.
+ * 
+ * @param GPIO_Pin: Pin number which EXTI event occurred.
+ */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if (GPIO_Pin == TRIGIN_RISING_Pin)

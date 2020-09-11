@@ -3,8 +3,10 @@
 #include "cparser.h"
 #include "lattice.h"
 
-/* Private typedefs --------------------------------------------------------*/
 /* Private function prototypes ---------------------------------------------*/
+static void sendMsg(char *buff, uint16_t length);
+
+// Trigger callbacks.
 static void authorizeCallback(Dictionary_t *params);
 static void setConstraintsCallback(Dictionary_t *params);
 static void getConstraintsCallback(Dictionary_t *params);
@@ -14,22 +16,30 @@ static void setSearchParametersCallback(Dictionary_t *params);
 static void getSearchParametersCallback(Dictionary_t *params);
 static void setErrorDetectionParametersCallback(Dictionary_t *params);
 static void getErrorDetectionParametersCallback(Dictionary_t *params);
+static void setMonitoringPeriodCallback(Dictionary_t *params);
+static void getMonitoringPeriodCallback(Dictionary_t *params);
 static void setPowerTrackingPidCoeffsCallback(Dictionary_t *params);
 static void getPowerTrackingPidCoeffsCallback(Dictionary_t *params);
 static void setFrequencyTrackingPidCoeffsCallback(Dictionary_t *params);
 static void getFrequencyTrackingPidCoeffsCallback(Dictionary_t *params);
 static void setDestinationPowerCallback(Dictionary_t *params);
-static void measureCallback(Dictionary_t *params);
+static void getDestinationPowerCallback(Dictionary_t *params);
+static void reportCallback(Dictionary_t *params);
 static void resetCallback(Dictionary_t *params);
 static void calibrateCallback(Dictionary_t *params);
 static void getStatusCallback(Dictionary_t *params);
 static void getErrorCallback(Dictionary_t *params);
 
+
 /* Imported variables ------------------------------------------------------*/
 extern UART_HandleTypeDef huart3;
 
 /* Private variables -------------------------------------------------------*/
-static Cp_Trigger_t TriggerTable[] =
+// Buffer for string manipulations.
+static char Buffer[CLI_MAX_COMMAND_LINE_LENGTH];
+
+// Trigger table.
+static const Cp_Trigger_t TriggerTable[] =
     {
         // Factory mode.
         {
@@ -103,6 +113,20 @@ static Cp_Trigger_t TriggerTable[] =
             .callback = getErrorDetectionParametersCallback,
             .numOfParams = 0},
 
+        // Set monitoring period.
+        {
+            .name = "mnprd-s",
+            .params = {{.letter = 'P', .type = CP_PARAM_TYPE_REAL}},
+            .callback = setMonitoringPeriodCallback,
+            .numOfParams = 1},
+
+        // Get monitoring period.
+        {
+            .name = "mnprd-g",
+            .params = {},
+            .callback = getMonitoringPeriodCallback,
+            .numOfParams = 0},
+
         // Set power tracking PID coefficients.
         {
             .name = "pwpid-s",
@@ -139,18 +163,24 @@ static Cp_Trigger_t TriggerTable[] =
 
         // Set destination power.
         {
-            .name = "setpw",
+            .name = "power-s",
             .params = {{.letter = 'P', .type = CP_PARAM_TYPE_REAL}},
             .callback = setDestinationPowerCallback,
             .numOfParams = 1},
 
-        // Measurement command.
+        // Get destination power.
         {
-            .name = "meas",
-            .params = {{.letter = 'S', .type = CP_PARAM_TYPE_INTEGER},
-                       {.letter = 'P', .type = CP_PARAM_TYPE_REAL}},
-            .callback = measureCallback,
-            .numOfParams = 2},
+            .name = "power-g",
+            .params = {},
+            .callback = getDestinationPowerCallback,
+            .numOfParams = 0},
+
+        // Report command.
+        {
+            .name = "report",
+            .params = {{.letter = 'S', .type = CP_PARAM_TYPE_INTEGER}},
+            .callback = reportCallback,
+            .numOfParams = 1},
 
         // Calibrate command.
         {
@@ -181,6 +211,9 @@ static Cp_Trigger_t TriggerTable[] =
             .numOfParams = 0}};
 
 /* Expoted functions -------------------------------------------------------*/
+/***
+ * @brief Initializes RS485 driver and registers trigger table.
+ */
 void Cli_Init(void)
 {
     // Initialize rs485 low level driver.
@@ -190,11 +223,17 @@ void Cli_Init(void)
     Cp_Register(TriggerTable, (sizeof(TriggerTable) / sizeof(TriggerTable[0])));
 }
 
+/***
+ * @brief Starts RS485 driver operation.
+ */
 void Cli_Start(void)
 {
     Rs485_Start();
 }
 
+/***
+ * @brief Handles pending events and applies routine controls.
+ */
 void Cli_Execute(void)
 {
     char line_term[] = CLI_LINE_TERMINATOR;
@@ -227,7 +266,22 @@ void Cli_Execute(void)
     }
 }
 
-void Cli_SendMsg(char *buff, uint8_t length)
+/***
+ * @brief Stops the RS485. 
+ */
+void Cli_Stop(void)
+{
+    Rs485_Stop();
+}
+
+/* Private functions -------------------------------------------------------*/
+/***
+ * @brief Sends the message given.
+ * 
+ * @param buff: Pointer to the message buffer.
+ * @param length: Length of the message.
+ */
+void sendMsg(char *buff, uint16_t length)
 {
     // Transmit message.
     Rs485_Transmit(buff, length);
@@ -237,36 +291,30 @@ void Cli_SendMsg(char *buff, uint8_t length)
     Rs485_Transmit(term, sizeof(term));
 }
 
-void Cli_Stop(void)
-{
-    Rs485_Stop();
-}
-
-/* Private functions -------------------------------------------------------*/
+/***
+ * @brief Sends operation result message.
+ *
+ * @param success: If operation result is successfull or not.
+ */
 void operationResult(Bool_t success)
 {
-    char buff[16];
     uint8_t ret;
     uint8_t length;
 
-    if (success)
-    {
-        ret = 1;
-    }
-    else
-    {
-        ret = 0;
-    }
+    ret = success ? 1 : 0;
 
     // Send response message.
-    length = snprintf(buff, sizeof(buff), "opres R%d", ret);
-    Rs485_Transmit(buff, length);
-
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
+    length = snprintf(Buffer, sizeof(Buffer), "opres R%d", ret);
+    sendMsg(Buffer, length);
 }
 
 /* Callback functions ------------------------------------------------------*/
+/***
+ * @brief Callback function which gets triggered when "factory" command is
+ * received. Puts the device into factory configuration mode.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void factoryCallback(Dictionary_t *params)
 {
     int32_t *password;
@@ -282,6 +330,12 @@ void factoryCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "cstr-s" command is
+ * received. Sets the device constraints.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void setConstraintsCallback(Dictionary_t *params)
 {
     float *max_power;
@@ -305,36 +359,34 @@ void setConstraintsCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "cstr-g" command is
+ * received. Gets the device constraints and returns them to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getConstraintsCallback(Dictionary_t *params)
 {
     float max_power;
     float min_loading;
     float max_loading;
-    char buff[64];
     uint8_t ret;
     uint8_t length;
 
     // Get constraints. If they are set, send response.
-    if (Lattice_GetConstraints(&max_power, &min_loading, &max_loading))
-    {
-        ret = 1;
-        length = snprintf(buff, "cstr-gr R%d P%f N%f X%f", sizeof(buff),
-                          ret, max_power, min_loading, max_loading);
-    }
-    else
-    {
-        ret = 0;
-        length = snprintf(buff, "cstr-gr R%d", sizeof(buff), ret);
-    }
+    ret = Lattice_GetConstraints(&max_power, &min_loading, &max_loading) ? 1 : 0;
+    length = snprintf(Buffer, "cstr-gr R%d P%f N%f X%f", sizeof(Buffer),
+                      ret, max_power, min_loading, max_loading);
 
-    // Send response.
-    Rs485_Transmit(buff, length);
-
-    // Send line terminator.
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
+    sendMsg(Buffer, length);
 }
 
+/***
+ * @brief Callback function which gets triggered when "devinf-s" command is
+ * received. Updates device information if in factory mode.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void setDeviceInfoCallback(Dictionary_t *params)
 {
     int32_t *deviceId;
@@ -358,35 +410,33 @@ void setDeviceInfoCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "devinf-g" command is
+ * received. Gets the device information and sends it to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getDeviceInfoCallback(Dictionary_t *params)
 {
     int32_t deviceId;
     int32_t versionMajor;
     int32_t versionMinor;
-    char buff[64];
     uint8_t length;
     uint8_t ret;
 
-    if (Lattice_GetDeviceInfo(&deviceId, &versionMajor, &versionMinor))
-    {
-        ret = 1;
-        length = snprintf(buff, "devinf-gr R%d I%f J%f N%f", sizeof(buff),
-                          ret, deviceId, versionMajor, versionMinor);
-    }
-    else
-    {
-        ret = 0;
-        length = snprintf(buff, "devinf-gr R%d", sizeof(buff), ret);
-    }
+    ret = Lattice_GetDeviceInfo(&deviceId, &versionMajor, &versionMinor) ? 1 : 0;
+    length = snprintf(Buffer, "devinf-gr R%d I%f J%f N%f", sizeof(Buffer), ret, deviceId,
+                      versionMajor, versionMinor);
 
-    // Send response.
-    Rs485_Transmit(buff, length);
-
-    // Send line terminator.
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
+    sendMsg(Buffer, length);
 }
 
+/***
+ * @brief Callback function which gets triggered when "srcprams-s" command is
+ * received. Sets resonance search parameters. 
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void setSearchParametersCallback(Dictionary_t *params)
 {
     float *normalized_power;
@@ -408,34 +458,72 @@ void setSearchParametersCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "srcprams-g" command is
+ * received. Get resonance search parameters and returns to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getSearchParametersCallback(Dictionary_t *params)
 {
     float normalized_power;
     int32_t steps;
-    char buff[64];
     uint8_t length;
     uint8_t ret;
 
-    if (Lattice_GetSearchingParams(&normalized_power, &steps))
+    ret = Lattice_GetSearchingParams(&normalized_power, &steps) ? 1 : 0;
+    length = snprintf(Buffer, "srcprams-gr R%d P%d S%f", sizeof(Buffer),
+                      ret, normalized_power, steps);
+
+    sendMsg(Buffer, length);
+}
+
+/***
+ * @brief Callback function which gets triggered when "mnprd-s" command is
+ * received. Sets device monitoring period(error check rate).
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
+void setMonitoringPeriodCallback(Dictionary_t *params)
+{
+    float *monitoring_period;
+
+    monitoring_period = (float *)Dictionary_Get(params, 'P', NULL);
+    if (monitoring_period)
     {
-        ret = 1;
-        length = snprintf(buff, "srcprams-gr R%d P%d S%f", sizeof(buff),
-                          ret, normalized_power, steps);
+        operationResult(Lattice_SetMonitoringPeriod(*monitoring_period));
     }
     else
     {
-        ret = 0;
-        length = snprintf(buff, "srcprams-gr R%d", sizeof(buff), ret);
+        operationResult(FALSE);
     }
-
-    // Send response.
-    Rs485_Transmit(buff, length);
-
-    // Send line terminator.
-    char line_term[] = CLI_LINE_TERMINATOR;
-    Rs485_Transmit(line_term, sizeof(line_term));
 }
 
+/***
+ * @brief Callback function which gets triggered when "mnprd-g" command is
+ * received. Gets device monitoring period and sends it to the
+ * host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
+void getMonitoringPeriodCallback(Dictionary_t *params)
+{
+    float monitoring_period;
+    uint8_t length;
+    uint8_t ret;
+
+    ret = Lattice_GetMonitoringPeriod(&monitoring_period) ? 1 : 0;
+    length = snprintf(Buffer, "mnprd-gr P%f", sizeof(Buffer), monitoring_period);
+
+    sendMsg(Buffer, length);
+}
+
+/***
+ * @brief Callback function which gets triggered when "errdet-s" command is
+ * received. Sets error detection parameters.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void setErrorDetectionParametersCallback(Dictionary_t *params)
 {
     float *min_horn_imp;
@@ -464,6 +552,12 @@ void setErrorDetectionParametersCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "errdet-g" command is
+ * received. Gets error detection parameters and sends it to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getErrorDetectionParametersCallback(Dictionary_t *params)
 {
     float min_horn_imp;
@@ -471,27 +565,25 @@ void getErrorDetectionParametersCallback(Dictionary_t *params)
     float power_track_tolerance;
     float freq_track_tolerance;
     float timeout;
-    char buff[128];
     uint8_t length;
     uint8_t ret;
 
-    if (Lattice_GetErrorDetectionParams(&min_horn_imp, &max_horn_imp, &power_track_tolerance,
-                                        &freq_track_tolerance, &timeout))
-    {
-        ret = 1;
-        length = snprintf(buff, "errdet-gr R%d N%f X%f P%f F%f T%f", sizeof(buff),
-                          ret, min_horn_imp, max_horn_imp, power_track_tolerance, 
-                          freq_track_tolerance, timeout);
-    }
-    else
-    {
-        ret = 0;
-        length = snprintf(buff, "errdet-gr R%d", sizeof(buff), ret);
-    }
+    ret = Lattice_GetErrorDetectionParams(&min_horn_imp, &max_horn_imp, &power_track_tolerance,
+                                          &freq_track_tolerance, &timeout);
+    ret = ret ? 1 : 0;
+    length = snprintf(Buffer, "errdet-gr R%d N%f X%f P%f F%f T%f", sizeof(Buffer),
+                      ret, min_horn_imp, max_horn_imp, power_track_tolerance,
+                      freq_track_tolerance, timeout);
 
-    Cli_SendMsg(buff, length);
+    sendMsg(Buffer, length);
 }
 
+/***
+ * @brief Callback function which gets triggered when "prpid-s" command is
+ * received. Sets power tracking PID parameters.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void setPowerTrackingPidCoeffsCallback(Dictionary_t *params)
 {
     float *kp;
@@ -516,28 +608,31 @@ void setPowerTrackingPidCoeffsCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "prpid-g" command is
+ * received. Gets power tracking PID parameters and sends them to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getPowerTrackingPidCoeffsCallback(Dictionary_t *params)
 {
-    float kp, ki, kd, tf;
-    char buff[64];
+    float kp = 0.0f, ki = 0.0f, kd = 0.0f, tf = 0.0f;
     uint8_t length;
     uint8_t ret;
 
-    if (Lattice_GetFrequencyTrackingPidCoeffs(&kp, &ki, &kd, &tf))
-    {
-        ret = 1;
-        length = snprintf(buff, "prpid-gr R%d P%d I%d D%f T%f", sizeof(buff),
-                          ret, kp, ki, kd, tf);
-    }
-    else
-    {
-        ret = 0;
-        length = snprintf(buff, "prpid-gr R%d", sizeof(buff), ret);
-    }
+    ret = Lattice_GetFrequencyTrackingPidCoeffs(&kp, &ki, &kd, &tf) ? 1 : 0;
+    length = snprintf(Buffer, "prpid-gr R%d P%d I%d D%f T%f", sizeof(Buffer),
+                      ret, kp, ki, kd, tf);
 
-    Cli_SendMsg(buff, length);
+    sendMsg(Buffer, length);
 }
 
+/***
+ * @brief Callback function which gets triggered when "frpid-s" command is
+ * received. Sets frequency tracking PID parameters.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void setFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
 {
     float *kp;
@@ -563,36 +658,40 @@ void setFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "frpid-g" command is
+ * received. Gets frequency tracking PID parameters and sends them to the 
+ * host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
 {
-    float kp, ki, kd, tf;
-    char buff[64];
+    float kp = 0.0f, ki = 0.0f, kd = 0.0f, tf = 0.0f;
     uint8_t length;
     uint8_t ret;
 
-    if (Lattice_GetFrequencyTrackingPidCoeffs(&kp, &ki, &kd, &tf))
-    {
-        ret = 1;
-        length = snprintf(buff, "frpid-gr R%d P%d I%d D%f T%f", sizeof(buff),
-                          ret, kp, ki, kd, tf);
-    }
-    else
-    {
-        ret = 0;
-        length = snprintf(buff, "frpid-gr R%d", sizeof(buff), ret);
-    }
+    ret = Lattice_GetFrequencyTrackingPidCoeffs(&kp, &ki, &kd, &tf) ? 1 : 0;
+    length = snprintf(Buffer, "frpid-gr R%d P%d I%d D%f T%f", sizeof(Buffer),
+                      ret, kp, ki, kd, tf);
 
-    Cli_SendMsg(buff, length);
+    sendMsg(Buffer, length);
 }
 
+/***
+ * @brief Callback function which gets triggered when "power-s" command is
+ * received. Sets destination power parameter.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void setDestinationPowerCallback(Dictionary_t *params)
 {
-    float *output_power;
+    float *dest_power;
 
-    output_power = (float *)Dictionary_Get(params, 'P', NULL);
-    if (output_power)
+    dest_power = (float *)Dictionary_Get(params, 'P', NULL);
+    if (dest_power)
     {
-        operationResult(Lattice_SetDestinationPower(*output_power));
+        operationResult(Lattice_SetDestinationPower(*dest_power));
     }
     else
     {
@@ -600,19 +699,42 @@ void setDestinationPowerCallback(Dictionary_t *params)
     }
 }
 
-void measureCallback(Dictionary_t *params)
+/***
+ * @brief Callback function which gets triggered when "power-g" command is
+ * received. Gets the destination power parameter and sends it to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
+void getDestinationPowerCallback(Dictionary_t *params)
+{
+    float dest_power;
+    uint8_t length;
+    uint8_t ret;
+
+    ret = Lattice_GetDestinationPower(&dest_power) ? 1 : 0;
+    length = snprintf(Buffer, "power-gr R%d P%f", sizeof(Buffer),
+                      ret, dest_power);
+
+    sendMsg(Buffer, length);
+}
+
+/***
+ * @brief Callback function which gets triggered when "report" command is
+ * received. Enables/disables reporting function.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
+void reportCallback(Dictionary_t *params)
 {
     int32_t *is_on;
-    float *measurement_period;
 
     // Parse parameters.
     is_on = (int32_t *)Dictionary_Get(params, 'S', NULL);
-    measurement_period = (float *)Dictionary_Get(params, 'P', NULL);
 
     // If parsing is successfull, call measure function.
-    if (is_on && measurement_period)
+    if (is_on)
     {
-        operationResult(Lattice_Measure(*is_on, *measurement_period));
+        operationResult(Lattice_Report(*is_on));
     }
     else
     {
@@ -620,37 +742,125 @@ void measureCallback(Dictionary_t *params)
     }
 }
 
+/***
+ * @brief Callback function which gets triggered when "reset" command is
+ * received. Applies system reset.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void resetCallback(Dictionary_t *params)
 {
     operationResult(TRUE);
     Lattice_Reset();
 }
 
+/***
+ * @brief Callback function which gets triggered when "calibrate" command is
+ * received. Start calibration operation.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void calibrateCallback(Dictionary_t *params)
 {
     operationResult(Lattice_Calibrate());
 }
 
+/***
+ * @brief Callback function which gets triggered when "gstat" command is
+ * received. Gets the device status and sends it to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getStatusCallback(Dictionary_t *params)
 {
     Lattice_Status_t status;
-    char buff[16];
     uint8_t length;
 
     status = Lattice_GetStatus();
-    length = snprintf(buff, "gstat-r S%d", sizeof(buff), status);
+    length = snprintf(Buffer, "gstat-r S%d", sizeof(Buffer), status);
 
-    Cli_SendMsg(buff, length);
+    sendMsg(Buffer, length);
 }
 
+/***
+ * @brief Callback function which gets triggered when "gerror" command is
+ * received. Gets the error code and sends it to the host.
+ * 
+ * @param params: Dictionary object holding pointers to the parsed parameters.
+ */
 void getErrorCallback(Dictionary_t *params)
 {
     Lattice_Error_t error;
-    char buff[16];
     uint8_t length;
 
     error = Lattice_GetError();
-    length = snprintf(buff, "gerror-r E%d", sizeof(buff), error);
+    length = snprintf(Buffer, "gerror-r E%d", sizeof(Buffer), error);
 
-    Cli_SendMsg(buff, length);
+    sendMsg(Buffer, length);
+}
+
+/* Lattice callback implementations ----------------------------------------*/
+/***
+ * @brief Gets triggered when horn impedance is not between limits for 
+ * <timeout> seconds.
+ * 
+ * @param hornImpedance: Impedance of the horn.
+ */
+void Lattice_HornImpedanceOutofWindowCallback(float hornImpedance)
+{
+    uint8_t length;
+    length = snprintf(Buffer, sizeof(Buffer), "errhimp I%.1f", hornImpedance);
+
+    sendMsg(Buffer, length);
+}
+
+/***
+ * @brief Gets triggered when measure is not between limits for 
+ * <timeout> seconds.
+ * 
+ * @param trackingMeasure: Tracking measure value.
+ */
+void Lattice_FrequencyTrackingFailureCallback(float trackingMeasure)
+{
+    uint8_t length;
+    length = snprintf(Buffer, sizeof(Buffer), "errftra M%.2f", trackingMeasure);
+
+    sendMsg(Buffer, length);
+}
+
+/***
+ * @brief Gets triggered when power is not between limits for 
+ * <timeout> seconds.
+ * 
+ * @param power: Power transmitted to the horn.
+ */
+void Lattice_PowerTrackingFailureCallback(float power)
+{
+    uint8_t length;
+    length = snprintf(Buffer, sizeof(Buffer), "errptra P%.1f", power);
+
+    sendMsg(Buffer, length);
+}
+
+/***
+ * @brief Gets triggered at every monitoring event if reporting flag is
+ * set. 
+ * @param triggered: If the device is triggered(power output enabled) or not.
+ * @param frequency: Current drive frequency.
+ * @param duty: Current driver duty.
+ * @param power: Complex power transmitted to the horn.
+ * @param impedance: Complex impedance of the horn.
+ */
+void Lattice_ReportingCallback(Bool_t triggered, float frequency, float duty,
+                               Complex_t *power, Complex_t *impedance)
+{
+    uint8_t length;
+    uint8_t trg;
+    trg = triggered ? 1 : 0;
+
+    length = snprintf(Buffer, sizeof(Buffer), "report T%d F%.0f D%.2f P%.1f I%.1f M%.1f J%.1f",
+                      triggered, frequency, duty, power->real, power->img,
+                      impedance->real, impedance->img);
+
+    sendMsg(Buffer, length);
 }

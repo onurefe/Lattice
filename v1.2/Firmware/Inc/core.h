@@ -26,14 +26,14 @@ void Core_Search(float normalizedPower, float startFrequency, float stopFrequenc
                  uint16_t steps);
 void Core_Track(Pid_Params_t *powerTrackingPidParams,
                 Pid_Params_t *frequencyTrackingPidParams,
-                float anchorFrequency, float fullPower, float destinationPower);
+                float anchorFrequency, float fullPower, float destinationPower, 
+                float monitoringPeriod);
 void Core_Execute(void);
 void Core_Stop(void);
 void Core_TriggerStatusUpdate(Bool_t triggered);
-void Core_Monitor(Bool_t enabled, float period);
 Core_Status_t Core_GetStatus(void);
 
-/* Callbacks ---------------------------------------------------------------*/
+/* Exported callbacks ------------------------------------------------------*/
 void Core_ScanCompletedCallback(void);
 void Core_SearchCompletedCallback(float resonanceFrequency, float resonanceImpedance,
                                   float fullPower);

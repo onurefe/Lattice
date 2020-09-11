@@ -112,6 +112,13 @@ static const float Deg2Sa100From1d8to2d2[CALIBRATION_NUM_OF_SAMPLES * (CALIBRATI
 };
 
 /* Exported functions ------------------------------------------------------*/
+/***
+ * @brief Applies second order regression to the given vector. Given vector 
+ * should be composed of 100 elements.
+ *
+ * @param samples: Pointer to the vector.
+ * @param coefficients: Pointer to the second order return polynomial.
+ */
 void Polyreg_Fit(float *samples, float *coefficients)
 {
     Matrix_t C, Y, A;

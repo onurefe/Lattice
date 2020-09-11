@@ -2,6 +2,7 @@
 #define __CONFIG_H
 
 /* Exported constants ------------------------------------------------------*/
+// Factory mode password generation.
 #define LATTICE_HASH_OFFSET 11199522U
 #define LATTICE_HASH_DIVISOR 0x97F56F91U
 

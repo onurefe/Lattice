@@ -30,4 +30,5 @@ Bool_t EepromEmulator_ReadObject(uint16_t objectId, uint16_t offset, uint16_t ma
                                         uint16_t *pLength, uint8_t *pData);
 void EepromEmulator_WriteObject(uint16_t objectId, uint16_t length, uint8_t *pData);
 void EepromEmulator_DeleteObject(uint16_t objectId);
+
 #endif

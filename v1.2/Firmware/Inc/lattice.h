@@ -3,6 +3,7 @@
 
 #include "global.h"
 #include "core.h"
+#include "complex.h"
 
 /* Exported types ----------------------------------------------------------*/
 enum
@@ -50,6 +51,7 @@ Bool_t Lattice_FactoryMode(int32_t password);
 Bool_t Lattice_Calibrate(void);
 void Lattice_Reset(void);
 Bool_t Lattice_SetDestinationPower(float destionationPower);
+Bool_t Lattice_GetDestinationPower(float *destionationPower);
 Bool_t Lattice_Report(Bool_t isOn);
 Lattice_Status_t Lattice_GetStatus(void);
 Lattice_Error_t Lattice_GetError(void);
@@ -58,5 +60,12 @@ Lattice_Error_t Lattice_GetError(void);
 void Lattice_Start(void);
 void Lattice_Execute(void);
 void Lattice_Stop(void);
+
+/* Exported callbacks-------------------------------------------------------*/
+void Lattice_HornImpedanceOutofWindowCallback(float hornImpedance);
+void Lattice_FrequencyTrackingFailureCallback(float trackingMeasure);
+void Lattice_PowerTrackingFailureCallback(float power);
+void Lattice_ReportingCallback(Bool_t triggered, float frequency, float duty,
+                               Complex_t *power, Complex_t *impedance);
 
 #endif

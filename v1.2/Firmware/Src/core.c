@@ -89,7 +89,6 @@ static Bool_t TrackingTriggeredPreload;
 
 // Monitored variables and their shadow registers.
 static float MonitoringPeriod;
-static Bool_t MonitoringEnabled;
 static float MonitoringStopwatch;
 static Complex_t MonitoringPower;
 static Complex_t MonitoringImpedance;
@@ -125,6 +124,16 @@ static float PwmDuty;
 static uint16_t AdcBuffer[ADC_DOUBLE_BUFFER_ELEMENT_COUNT];
 
 /* Exported functions ------------------------------------------------------*/
+/***
+ * @brief Initializes the module.
+ * 
+ * @param calibrationCoeffs: NULL if no calibation is present. Includes some second
+ * order polynomial coefficients if not NULL.
+ * @param minFrequency: Frequency range minimum value.
+ * @param maxFrequency: Frequency range maximum value.
+ * @param minNormPower: Minimum normalized power.
+ * @param maxNormPower: Maximum normalized power.
+ */
 void Core_Init(Complex_t *calibrationCoeffs, float minFrequency, float maxFrequency,
                float minNormPower, float maxNormPower)
 {
@@ -143,9 +152,6 @@ void Core_Init(Complex_t *calibrationCoeffs, float minFrequency, float maxFreque
     TrackingTriggeredPreload = FALSE;
     TrackingTriggered = FALSE;
 
-    // Periodic measurements disabled.
-    MonitoringEnabled = FALSE;
-
     // Set calibration polynomial.
     if (calibrationCoeffs)
     {
@@ -158,6 +164,16 @@ void Core_Init(Complex_t *calibrationCoeffs, float minFrequency, float maxFreque
     }
 }
 
+/***
+ * @brief Scans the frequencies in the given range and records the 
+ * complex impedance curve.
+ * 
+ * @param startFrequency: Scanning start frequency.
+ * @param stopFrequency: Scanning stop frequency.
+ * @param steps: Number of frequencies.
+ * @param impedanceReal: Pointer to return impedance curve real component.
+ * @param impedanceImg. Pointer to return impedance curve imaginary component.
+ */
 void Core_Scan(float startFrequency, float stopFrequency,
                uint16_t steps, float *impedanceReal, float *impedanceImg)
 {
@@ -189,6 +205,15 @@ void Core_Scan(float startFrequency, float stopFrequency,
     Status = CORE_STATUS_SCANNING;
 }
 
+/***
+ * @brief Searchs for the resonance frequency within the given range.
+ * 
+ * @param normalizedPower: While searching for the resonance frequeny, 
+ * controls the power.
+ * @param startFrequency: Searching start frequency.
+ * @param stopFrequency: Searching stop frequency.
+ * @param steps: Number of frequencies(related to resolution)
+ */
 void Core_Search(float normalizedPower, float startFrequency, float stopFrequency,
                  uint16_t steps)
 {
@@ -220,9 +245,23 @@ void Core_Search(float normalizedPower, float startFrequency, float stopFrequenc
     Status = CORE_STATUS_SEARCHING;
 }
 
+/***
+ * @brief Starts the tracking function of the device.
+ * 
+ * @param powerTrackingPidParams: Parameters of the PID block controlling power 
+ * tracking.
+ * @param frequencyTrackingParams: Parameters of the PID block controlling 
+ * frequency tracking.
+ * @param anchorFrequency: Bias frequency for the frequency tracking block.
+ * @param fullPower: Maximum power delivered to the horn at resonance 
+ * frequency.
+ * @param destinationPower: Destination (real)power to be delivered to the horn.
+ * @param monitoringPeriod: Interval which module shares tracking information.
+ */
 void Core_Track(Pid_Params_t *powerTrackingPidParams,
                 Pid_Params_t *frequencyTrackingPidParams,
-                float anchorFrequency, float fullPower, float destinationPower)
+                float anchorFrequency, float fullPower, float destinationPower,
+                float monitoringPeriod)
 {
     // Status check.
     if (Status != CORE_STATUS_READY)
@@ -243,6 +282,9 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     TrackingDestinationPower = destinationPower;
     TrackingFullPower = fullPower;
 
+    // Set monitoring period.
+    MonitoringPeriod = monitoringPeriod;
+
     // Clear monitoring runtime variables.
     Complex_Set(&MonitoringPower, destinationPower, 0.0f);
     Complex_Set(&MonitoringImpedance, 0.0f, 0.0f);
@@ -260,6 +302,9 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     Status = CORE_STATUS_TRACKING;
 }
 
+/***
+ * @brief Handles pending events.
+ */
 void Core_Execute(void)
 {
     // Validate state.
@@ -293,16 +338,19 @@ void Core_Execute(void)
         Events ^= EVENT_SEARCH_COMPLETED;
     }
 
-    // Handle periodic measurement event.
+    // Handle monitoring event.
     if ((Events & EVENT_MONITORING_UPDATE) != 0)
     {
-        Core_MonitoringCallback(MonitoringTriggeredShadow, MonitoringFrequencyShadow, MonitoringLoadingShadow, 
+        Core_MonitoringCallback(MonitoringTriggeredShadow, MonitoringFrequencyShadow, MonitoringLoadingShadow,
                                 &MonitoringPowerShadow, &MonitoringImpedanceShadow);
 
         Events ^= EVENT_MONITORING_UPDATE;
     }
 }
 
+/***
+ * @brief Stops the core module.
+ */
 void Core_Stop(void)
 {
     // Validate state.
@@ -317,24 +365,21 @@ void Core_Stop(void)
     Status = CORE_STATUS_READY;
 }
 
+/***
+ * @brief Updates trigger status.
+ * 
+ * @param triggered: Flag to show if triggered or not.
+ */
 void Core_TriggerStatusUpdate(Bool_t triggered)
 {
     TrackingTriggeredPreload = triggered;
 }
 
-void Core_PeriodicMeasurements(Bool_t enabled, float period)
-{
-    if (enabled)
-    {
-        MonitoringEnabled = TRUE;
-        MonitoringPeriod = period;
-    }
-    else
-    {
-        MonitoringEnabled = FALSE;
-    }
-}
-
+/***
+ * @brief Gets the core module status.
+ * 
+ * @retval Status.
+ */
 Core_Status_t Core_GetStatus(void)
 {
     return Status;
@@ -368,6 +413,10 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 }
 
 /* Private functions -------------------------------------------------------*/
+/***
+ * @brief ISR handling function. This is called periodically when ADC buffer 
+ * is half-full. Does the signal processing and control processes.
+ */
 inline void control(uint16_t *adcBuffer)
 {
     Complex_t voltage, current;
@@ -389,6 +438,13 @@ inline void control(uint16_t *adcBuffer)
     }
 }
 
+/***
+ * @brief Called when core operates as scanner. Records the 
+ * obtained impedance data and sweeps the PWM frequency.
+ * 
+ * @param voltage: Voltage phasor.
+ * @param current: Current phasor.
+ */
 inline void scanner(Complex_t *voltage, Complex_t *current)
 {
     if (Iteration < Steps)
@@ -414,6 +470,13 @@ inline void scanner(Complex_t *voltage, Complex_t *current)
     }
 }
 
+/***
+ * @brief Called when core operates as searcher. Records the 
+ * resonance point related data while sweeping the PWM frequency.
+ * 
+ * @param voltage: Voltage phasor.
+ * @param current: Current phasor.
+ */
 inline void searcher(Complex_t *voltage, Complex_t *current)
 {
     if (Iteration < Steps)
@@ -451,6 +514,13 @@ inline void searcher(Complex_t *voltage, Complex_t *current)
     }
 }
 
+/***
+ * @brief Executed at the ISR time. Controls output power and
+ * phase in real-time. Keeps the horn at resonance frequency.
+ * 
+ * @param voltage: Measured complex voltage.
+ * @param current: Measured complex current.
+ */
 inline void tracker(Complex_t *voltage, Complex_t *current)
 {
     Complex_t power;
@@ -499,39 +569,43 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
         updateClockCircuitry(PwmFrequency, getDuty(ConstraintMinNormPower));
     }
 
-    // Update monitoring values(if enabled).
-    if (MonitoringEnabled)
+    // Update monitoring values.
+    float cfilt;
+    cfilt = deltat / MonitoringPeriod;
+
+    emaComplex(&MonitoringPower, &power, cfilt);
+    emaComplex(&MonitoringImpedance, &impedance, cfilt);
+    ema(&MonitoringFrequency, PwmFrequency, cfilt);
+    ema(&MonitoringLoading, (power.real / TrackingFullPower), cfilt);
+
+    MonitoringStopwatch += deltat;
+
+    // If periodic measurements are enabled; update shadow registers.
+    if (MonitoringStopwatch > MonitoringPeriod)
     {
-        float cfilt;
-        cfilt = deltat / MonitoringPeriod;
+        MonitoringStopwatch -= MonitoringPeriod;
 
-        emaComplex(&MonitoringPower, &power, cfilt);
-        emaComplex(&MonitoringImpedance, &impedance, cfilt);
-        ema(&MonitoringFrequency, PwmFrequency, cfilt);
-        ema(&MonitoringLoading, (power.real / TrackingFullPower), cfilt);
+        // Copy measurements to shadow registers.
+        Complex_Copy(&MonitoringPower, &MonitoringPowerShadow);
+        Complex_Copy(&MonitoringImpedance, &MonitoringImpedanceShadow);
+        MonitoringFrequencyShadow = MonitoringFrequency;
+        MonitoringLoadingShadow = MonitoringLoading;
+        MonitoringTriggeredShadow = TrackingTriggered;
 
-        MonitoringStopwatch += deltat;
-
-        // If periodic measurements are enabled; update shadow registers.
-        if (MonitoringStopwatch > MonitoringPeriod)
-        {
-            MonitoringStopwatch -= MonitoringPeriod;
-
-            // Copy measurements to shadow registers.
-            Complex_Copy(&MonitoringPower, &MonitoringPowerShadow);
-            Complex_Copy(&MonitoringImpedance, &MonitoringImpedanceShadow);
-            MonitoringFrequencyShadow = MonitoringFrequency;
-            MonitoringLoadingShadow = MonitoringLoading;
-            MonitoringTriggeredShadow = TrackingTriggered;
-
-            // Set monitoring update event.
-            Events |= EVENT_MONITORING_UPDATE;
-        }
+        // Set monitoring update event.
+        Events |= EVENT_MONITORING_UPDATE;
     }
 
     TrackingTriggered = TrackingTriggeredPreload;
 }
 
+/***
+ * @brief Returns the voltage and current complex phasors by processing 
+ * sampled values.
+ * 
+ * @param voltage: Voltage phasor.
+ * @param current: Current phasor.
+ */
 inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
 {
     static const float cosine[] = {1.0f, 0.8660254037844386f, 0.5f, 0.0f, -0.5f, -0.8660254037844386f};
@@ -597,6 +671,13 @@ inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
     Complex_MultiplyReal(&i, SIGNAL_PROCESSING_CURRENT_MULTIPLIER, &i);
 }
 
+/***
+ * @brief Updates the HRTIM clock circuitry in order to generate
+ * requested PWM signal.
+ * 
+ * @param pwmFrequency: Frequency of the PWM signal.
+ * @param pwmDuty: Duty ratio of the PWM signal
+ */
 inline void updateClockCircuitry(float pwmFrequency, float pwmDuty)
 {
     // Update PWM frequency & duty.
@@ -623,6 +704,9 @@ inline void updateClockCircuitry(float pwmFrequency, float pwmDuty)
     __HAL_HRTIM_SETCOMPARE(&hhrtim1, HRTIM_TIMERINDEX_TIMER_B, HRTIM_COMPAREUNIT_2, comp);
 }
 
+/***
+ * @brief Starts signal generation and data acquision.
+ */
 void engineStart(void)
 {
     // Start ADC calibration.
@@ -643,6 +727,9 @@ void engineStart(void)
     HAL_HRTIM_WaveformCounterStart(&hhrtim1, HRTIM_TIMERID_TIMER_A);
 }
 
+/***
+ * @brief Stops signal generation and data acquision.
+ */
 void engineStop(void)
 {
     // Stop triggering ADC.
@@ -662,37 +749,88 @@ void engineStop(void)
 }
 
 /* Default callbacks -------------------------------------------------------*/
+/***
+ * @brief Gets triggered when scan process is completed.
+ */
 __weak void Core_ScanCompletedCallback(void)
 {
 }
 
-__weak void Core_SearchCompletedCallback(float resonanceFrequency, float resonanceImpedance,
+/***
+ * @brief Gets triggered when search is completed.
+ * 
+ * @param resonanceFrequency: Detected resonance frequency.
+ * @param resonanceImpedance: Impedance at the resonance frequency.
+ * @param fullPower: Maximum power transmittable at resonance frequency.
+ */
+__weak void Core_SearchCompletedCallback(float resonanceFrequency,
+                                         float resonanceImpedance,
                                          float fullPower)
 {
 }
 
+/***
+ * @brief Gets triggered when monitoring event occurrs. 
+ * 
+ * @param triggered: Flag showing if triggered or not.
+ * @param frequency: Tracking frequency.
+ * @param duty: Tracking duty.
+ * @param power: Power transmitted to the horn.
+ * @param impedance: Impedance of the horn.
+ */
 __weak void Core_MonitoringCallback(Bool_t triggered, float frequency, float duty,
                                     Complex_t *power, Complex_t *impedance)
 {
 }
 
 /* Utilities ---------------------------------------------------------------*/
+/****
+ * @brief Converts the given normalized power to the duty required to
+ * generate it(for the main harmonic).
+ * 
+ * @param normalizedPower: Normalized required power.
+ *
+ * @retval Duty([0.0, 1.0]).
+ */
 inline float getDuty(float normalizedPower)
 {
     return (fastacos(1.0f - 2.0f * normalizedPower) / M_2PI);
 }
 
+/***
+ * @brief Updates the exponential moving average of a signal.
+ * 
+ * @param param: Output signal.
+ * @param value: Input signal.
+ * @param cfilt: Filter coefficient.
+ */
 inline void ema(float *param, float value, float cfilt)
 {
     (*param) = value * cfilt + (1.0f - cfilt) * (*param);
 }
 
+/***
+ * @brief Updates the exponential moving average of a complex signal.
+ * 
+ * @param param: Output signal.
+ * @param value: Input signal.
+ * @param cfilt: Filter coefficient.
+ */
 inline void emaComplex(Complex_t *param, Complex_t *value, float cfilt)
 {
     param->real = value->real * cfilt + (1.0f - cfilt) * param->real;
     param->img = value->img * cfilt + (1.0f - cfilt) * param->img;
 }
 
+/***
+ * @brief Clamps the given value between the given boundaries.
+ * 
+ * @param value: Value to be clamped.
+ * @param min: Minimum value.
+ * @param max: Maximum value.
+ * 
+ * @retval Clamped value.
+ */
 inline float clamp(float value, float min, float max)
 {
     value = (value > max) ? max : value;
@@ -701,6 +839,13 @@ inline float clamp(float value, float min, float max)
     return value;
 }
 
+/***
+ * @brief Takes the arccosine of a value given.
+ * 
+ * @param x: Value to be taken the arccosine.
+ * 
+ * @retval Angles in radian.
+ */
 inline float fastacos(float x)
 {
     float a = -0.939115566365855f;

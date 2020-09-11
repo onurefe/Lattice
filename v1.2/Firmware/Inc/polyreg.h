@@ -5,6 +5,6 @@
 #include "complex.h"
 
 /* Exported functions ------------------------------------------------------*/
-extern void Polyreg_Fit(float *samples, float *coefficients);
+void Polyreg_Fit(float *samples, float *coefficients);
 
 #endif

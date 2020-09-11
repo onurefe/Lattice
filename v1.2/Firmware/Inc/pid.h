@@ -25,6 +25,14 @@ typedef struct
 } Pid_t;
 
 /* Inline functions --------------------------------------------------------*/
+/***
+ * @brief Sets up the PID block.
+ * 
+ * @param pid: Pointer to the PID module.
+ * @param params: Pointer to the PID parameter struct.
+ * @param minVal: Minimum output value.
+ * @param maxVal: Maximum output value.
+ */
 inline void Pid_Setup(Pid_t *pid, Pid_Params_t *params, float minVal, float maxVal)
 {
     pid->kp = params->kp;
@@ -37,6 +45,15 @@ inline void Pid_Setup(Pid_t *pid, Pid_Params_t *params, float minVal, float maxV
     pid->lastInput = 0.0f;
 }
 
+/***
+ * @brief Updates PID block internals and output.
+ * 
+ * @param pid: Pointer to the PID module.
+ * @param input: Input signal.
+ * @param dt: Time change since last call.
+ * 
+ * @retval Output signal.
+ */
 inline float Pid_Exe(Pid_t *pid, float input, float dt)
 {
     float cfilt;
