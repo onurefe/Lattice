@@ -551,7 +551,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
 
         // Calculate tracking measure.
         float tracking_measure;
-        tracking_measure = power.img / power.real;
+        tracking_measure = -power.img / power.real;
 
         // Get frequency.
         frequency = pidExe(&TrackingFrequencyPid,
@@ -610,8 +610,10 @@ inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
 {
     static const float cosine[] = {1.0f, 0.8660254037844386f, 0.5f, 0.0f, -0.5f, -0.8660254037844386f};
     static const float sine[] = {0.0f, 0.5f, 0.8660254037844386f, 1.0f, 0.8660254037844386f, 0.5f};
-    uint16_t off = SIGNAL_PROCESSING_BLANKED_ELEMENT_COUNT * ADC_CHANNELS;
+    uint16_t off;
     float sum[24] = {0.0f};
+    
+    off = SIGNAL_PROCESSING_BLANKED_ELEMENT_COUNT * ADC_CHANNELS;
 
     // Sum elements which are to be multiplied with same modulation phase.
     while (off < (SIGNAL_PROCESSING_WINDOW_ELEMENT_COUNT * ADC_CHANNELS))
@@ -648,10 +650,10 @@ inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
     // Apply weighted sum to find unnormalized voltage and current phasors.
     for (uint8_t n = 0; n < 6; n++)
     {
-        v.real += sum[2 * n + 1] - sum[2 * n + 13] * cosine[n];
-        v.img += sum[2 * n + 1] - sum[2 * n + 13] * sine[n];
-        i.real += sum[2 * n] - sum[2 * n + 12] * cosine[n];
-        i.img += sum[2 * n] - sum[2 * n + 12] * sine[n];
+        v.real += (sum[2 * n + 1] - sum[2 * n + 13]) * cosine[n];
+        v.img += (sum[2 * n + 13] - sum[2 * n + 1]) * sine[n];
+        i.real += (sum[2 * n] - sum[2 * n + 12]) * cosine[n];
+        i.img += (sum[2 * n + 12] - sum[2 * n]) * sine[n];
     }
 
     // Correct analog circuitry errors if  calibrated.
@@ -667,8 +669,8 @@ inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
     }
 
     // Normalize voltage and current phasors.
-    Complex_MultiplyReal(&v, SIGNAL_PROCESSING_VOLTAGE_MULTIPLIER, &v);
-    Complex_MultiplyReal(&i, SIGNAL_PROCESSING_CURRENT_MULTIPLIER, &i);
+    Complex_MultiplyReal(&v, SIGNAL_PROCESSING_VOLTAGE_MULTIPLIER, voltage);
+    Complex_MultiplyReal(&i, SIGNAL_PROCESSING_CURRENT_MULTIPLIER, current);
 }
 
 /***
