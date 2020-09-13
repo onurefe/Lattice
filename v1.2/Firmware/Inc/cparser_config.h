@@ -8,7 +8,7 @@
 #define __CPARSER_CONFIG_H
 
 /** Maximum number of parameters which a trigger can have. */
-#define CPARSER_CONFIG_MAX_NUM_OF_PARAMS 5
+#define CPARSER_CONFIG_MAX_NUM_OF_PARAMS 6
 
 /** Maximum number of triggers which can be registered. */
 #define CPARSER_CONFIG_MAX_NUM_OF_TRIGGERS 25

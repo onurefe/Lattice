@@ -35,10 +35,10 @@ Bool_t Lattice_SetSearchingParams(float normalizedPower, uint16_t steps);
 Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps);
 Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpedance,
                                        float powerTrackingTolerance, float frequencyTrackingTolerance,
-                                       float timeout);
+                                       float monitoringPeriod, float timeout);
 Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
                                        float *powerTrackingTolerance, float *frequencyTrackingTolerance,
-                                       float *timeout);
+                                       float *monitoringPeriod, float *timeout);
 Bool_t Lattice_SetMonitoringPeriod(float period);
 Bool_t Lattice_GetMonitoringPeriod(float *period);
 Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf);

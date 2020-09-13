@@ -27,8 +27,9 @@ build/main.o: Src/main.c Inc/main.h Inc/global.h \
  Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim.h \
  Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim_ex.h \
  Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart.h \
- Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h Inc/lattice.h \
- Inc/eeprom_emulator.h
+ Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h Inc/config.h \
+ Inc/lattice.h Inc/core.h Inc/pid.h Inc/complex.h Inc/eeprom_emulator.h \
+ Inc/cli.h
 
 Inc/main.h:
 
@@ -96,6 +97,16 @@ Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart.h:
 
 Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h:
 
+Inc/config.h:
+
 Inc/lattice.h:
 
+Inc/core.h:
+
+Inc/pid.h:
+
+Inc/complex.h:
+
 Inc/eeprom_emulator.h:
+
+Inc/cli.h:

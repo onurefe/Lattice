@@ -2,9 +2,17 @@
 #define __POLYREG_H
 
 #include "global.h"
-#include "complex.h"
 
-/* Exported functions ------------------------------------------------------*/
-void Polyreg_Fit(float *samples, float *coefficients);
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+    /* Exported functions ------------------------------------------------------*/
+    extern void Polyreg_Fit(float *samples, float *coefficients);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

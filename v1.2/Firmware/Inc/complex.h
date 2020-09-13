@@ -2,6 +2,7 @@
 #define __COMPLEX_H
 
 #include "global.h"
+#include "math.h"
 
 /* Exported types ----------------------------------------------------------*/
 typedef struct

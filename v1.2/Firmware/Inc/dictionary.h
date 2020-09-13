@@ -8,7 +8,7 @@
 #ifndef __DICTIONARY_H
 #define __DICTIONARY_H
 
-#include "generic.h"
+#include "global.h"
 #include "cparser_config.h"
 
 #ifdef __cplusplus

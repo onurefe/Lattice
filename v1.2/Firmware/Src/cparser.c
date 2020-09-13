@@ -3,7 +3,7 @@
  * 
  * Cparser library core module.
  */
-#include "../inc/cparser.h"
+#include "cparser.h"
 #include "math.h"
 
 /* Private constants -------------------------------------------------------*/
@@ -31,7 +31,7 @@ static void cropJerk(char *input, uint8_t start_idx, uint8_t length, uint8_t *st
 static uint8_t getLength(const char *input);
 
 /* Private variables -------------------------------------------------------*/
-static Cp_Trigger_t *TriggerTable[CPARSER_CONFIG_MAX_NUM_OF_TRIGGERS];
+static const Cp_Trigger_t *TriggerTable[CPARSER_CONFIG_MAX_NUM_OF_TRIGGERS];
 static uint16_t NumOfTriggers = 0;
 static Dictionary_t ParameterDictionary;
 
@@ -50,7 +50,7 @@ void Cp_Reset(void)
  * @param triggers: Pointer to the trigger array.
  * @param numOfTriggers: Number of triggers to be registered.
  */
-void Cp_Register(Cp_Trigger_t *triggers, uint16_t numOfTriggers)
+void Cp_Register(const Cp_Trigger_t *triggers, uint16_t numOfTriggers)
 {
     for (uint16_t i = 0; i < numOfTriggers; i++)
     {
@@ -79,7 +79,7 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
     }
 
     // Find trigger.
-    Cp_Trigger_t *trigger = NULL;
+    const Cp_Trigger_t *trigger = NULL;
     for (uint8_t i = 0; i < NumOfTriggers; i++)
     {
         if (doesMatch(TriggerTable[i]->name, &input[fields[0].start],

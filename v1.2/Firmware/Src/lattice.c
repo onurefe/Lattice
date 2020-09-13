@@ -36,6 +36,7 @@ typedef struct
     float maxHornImpedance;
     float powerTrackingTolerance;
     float frequencyTrackingTolerance;
+    float monitoringPeriod;
     float timeout;
 } ErrorDetectionParams_t;
 
@@ -48,7 +49,6 @@ typedef struct
     Bool_t errorDetectionParams : 1;
     Bool_t powerTrackingPidParams : 1;
     Bool_t frequencyTrackingPidParams : 1;
-    Bool_t monitoringPeriod : 1;
     Bool_t trackingDestinationPower : 1;
 } FactoryFlags_t;
 
@@ -78,7 +78,6 @@ static SearchingParams_t SearchingParams;
 static ErrorDetectionParams_t ErrorDetectionParams;
 static Pid_Params_t PowerTrackingPidParams;
 static Pid_Params_t FrequencyTrackingPidParams;
-static float MonitoringPeriod;
 static float TrackingDestinationPower; // User can overwrite the destination power.
 
 // Runtime variables.
@@ -138,8 +137,6 @@ void Lattice_Start(void)
     Flags.frequencyTrackingPidParams = EepromEmulator_ReadObject(LATTICE_FREQUENCY_TRACKING_PID_PARAMS_EEID, 0,
                                                                  sizeof(FrequencyTrackingPidParams), NULL,
                                                                  &FrequencyTrackingPidParams);
-    Flags.monitoringPeriod = EepromEmulator_ReadObject(LATTICE_MONITORING_PERIOD_EEID, 0, sizeof(MonitoringPeriod),
-                                                       NULL, &MonitoringPeriod);
     Flags.trackingDestinationPower = EepromEmulator_ReadObject(LATTICE_TRACKING_DESTINATION_POWER_EEID, 0,
                                                                sizeof(TrackingDestinationPower), NULL,
                                                                &TrackingDestinationPower);
@@ -148,9 +145,10 @@ void Lattice_Start(void)
     //as configured. If not configured, put device into the factory mode.
     if (Flags.calibration && Flags.constraints && Flags.deviceInfo && Flags.searchingParams &&
         Flags.errorDetectionParams && Flags.powerTrackingPidParams && Flags.frequencyTrackingPidParams &&
-        Flags.monitoringPeriod && Flags.trackingDestinationPower)
+        Flags.trackingDestinationPower)
     {
-        Core_Init(&Calibration, LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY, Constraints.minLoading,
+        Core_Init(Calibration.calibrationPoly, LATTICE_MIN_FREQUENCY,
+                  LATTICE_MAX_FREQUENCY, Constraints.minLoading,
                   Constraints.maxLoading);
 
         // Start searching for the resonance frequency.
@@ -277,8 +275,6 @@ void Lattice_Execute(void)
     {
         if (Status == LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING)
         {
-            float coeffs_real[CALIBRATION_POLY_DEGREE + 1];
-            float coeffs_img[CALIBRATION_POLY_DEGREE + 1];
             Complex_t coeffs[CALIBRATION_POLY_DEGREE + 1];
 
             calculateCalibrationPolynomials(ScanImpedanceReal, ScanImpedanceImg,
@@ -473,6 +469,7 @@ Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps)
  * @param maxHornImpedance: Acceptable maximum impedance of the horn.
  * @param powerTrackingTolerance: Tolerance of the power tracking algorithm. 
  * @param frequencyTrackingTolerance: Tolerance of the frequency tracking algorithm.
+ * @param monitoringPeriod: Interval which controls are applied.
  * @param timeout: Timeout value in seconds. This some value is out of the acceptable 
  * boundaries for <timeout> number of seconds; error will be invoked.
  * 
@@ -480,7 +477,7 @@ Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps)
  */
 Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpedance,
                                        float powerTrackingTolerance, float frequencyTrackingTolerance,
-                                       float timeout)
+                                       float monitoringPeriod, float timeout)
 {
     if (Status != LATTICE_STATUS_FACTORY_CONFIG)
     {
@@ -488,13 +485,14 @@ Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpe
     }
 
     // Update error detection parameters.
-    if (((0.0f < minHornImpedance) && (minHornImpedance < maxHornImpedance)) &&
+    if (((0.0f < minHornImpedance) && (minHornImpedance < maxHornImpedance)) && (0.0f < monitoringPeriod) &&
         (0.0f < powerTrackingTolerance) && (0.0f < frequencyTrackingTolerance) && (0.0f < timeout))
     {
         ErrorDetectionParams.minHornImpedance = minHornImpedance;
         ErrorDetectionParams.maxHornImpedance = maxHornImpedance;
         ErrorDetectionParams.powerTrackingTolerance = powerTrackingTolerance;
         ErrorDetectionParams.frequencyTrackingTolerance = frequencyTrackingTolerance;
+        ErrorDetectionParams.monitoringPeriod = monitoringPeriod;
         ErrorDetectionParams.timeout = timeout;
 
         Flags.errorDetectionParams = TRUE;
@@ -519,13 +517,14 @@ Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpe
  * @param maxHornImpedance: Pointer to return maximum horn impedance.
  * @param powerTrackingTolerance: Pointer to return power tracking tolerance.
  * @param frequencyTrackingTolerance: Pointer to return frequency tracking tolerance.
+ * @param monitoringPeriod: Pointer to return monitoring period value.
  * @param timeout: Pointer to return timeout value.
  * 
  * @retval Operation result: either TRUE or FALSE.
  */
 Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
                                        float *powerTrackingTolerance, float *frequencyTrackingTolerance,
-                                       float *timeout)
+                                       float *monitoringPeriod, float *timeout)
 {
     if (!Flags.errorDetectionParams)
     {
@@ -536,53 +535,8 @@ Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornIm
     *maxHornImpedance = ErrorDetectionParams.maxHornImpedance;
     *powerTrackingTolerance = ErrorDetectionParams.powerTrackingTolerance;
     *frequencyTrackingTolerance = ErrorDetectionParams.frequencyTrackingTolerance;
+    *monitoringPeriod = ErrorDetectionParams.monitoringPeriod;
     *timeout = ErrorDetectionParams.timeout;
-
-    return TRUE;
-}
-
-/***
- * @brief Sets the monitoring period(error detection system).
- * 
- * @param period: Period of error checking and reporting(if enabled).
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_SetMonitoringPeriod(float period)
-{
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
-    {
-        return FALSE;
-    }
-
-    if (period > 0.0f)
-    {
-        MonitoringPeriod = period;
-        Flags.monitoringPeriod = TRUE;
-
-        EepromEmulator_WriteObject(LATTICE_MONITORING_PERIOD_EEID, sizeof(MonitoringPeriod),
-                                   &MonitoringPeriod);
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-/***
- * @brief Gets the monitoring period.
- * 
- * @param period: Pointer to return the monitoring period.
- *
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_GetMonitoringPeriod(float *period)
-{
-    if (!Flags.monitoringPeriod)
-    {
-        return FALSE;
-    }
-
-    *period = MonitoringPeriod;
 
     return TRUE;
 }
@@ -885,7 +839,7 @@ void startTracking(void)
 {
     // Start tracking.
     Core_Track(&PowerTrackingPidParams, &FrequencyTrackingPidParams, ResonanceFrequency,
-               FullPower, TrackingDestinationPower, MonitoringPeriod);
+               FullPower, TrackingDestinationPower, ErrorDetectionParams.monitoringPeriod);
 
     // Clear error counters.
     HornImpedanceOutofWindowsSuccessiveErrors = 0;
@@ -905,7 +859,7 @@ void startTracking(void)
 int32_t hash(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
 {
     uint64_t tmp;
-    tmp = (deviceId << 32) | (versionMajor << 16) | versionMinor;
+    tmp = ((uint64_t)deviceId << 32) | (versionMajor << 16) | versionMinor;
 
     return ((tmp + LATTICE_HASH_OFFSET) % LATTICE_HASH_DIVISOR);
 }
@@ -1079,7 +1033,9 @@ void Core_MonitoringCallback(Bool_t triggered, float frequency, float duty,
 
         // Calculate maximum number of successive errors.
         uint8_t max_successive_errors;
-        max_successive_errors = (uint8_t)((ErrorDetectionParams.timeout / MonitoringPeriod) + 0.5f);
+        max_successive_errors = (uint8_t)((ErrorDetectionParams.timeout /
+                                           ErrorDetectionParams.monitoringPeriod) +
+                                          0.5f);
 
         // Check if any type of error counter has exceeded the maximum number of errors.
         if (HornImpedanceOutofWindowsSuccessiveErrors > max_successive_errors)

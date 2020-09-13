@@ -120,10 +120,10 @@ Bool_t Rs485_TxBuffAvailable(void)
  * @param buff: Pointer of the array.
  * @param length: Element count of the array.
  */
-void Rs485_Transmit(uint8_t *buff, uint16_t length)
+void Rs485_Transmit(char *buff, uint16_t length)
 {
     // Enqueue data to the buffer.
-    Queue_EnqueueArr(&TxBuffer, buff, length);
+    Queue_EnqueueArr(&TxBuffer, (uint8_t *)buff, length);
 
     // Start transmision if it wasn't active.
     if (!TxActive && !Queue_IsEmpty(&TxBuffer))

@@ -532,22 +532,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void Lattice_StatusChangeCb(Lattice_Status_t *status)
-{
-}
-
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-    if (GPIO_Pin == TRIGIN_RISING_Pin)
-    {
-        Lattice_CmdPowerOutput(TRUE);
-    }
-
-    if (GPIO_Pin == TRIGIN_FALLING_Pin)
-    {
-        Lattice_CmdPowerOutput(FALSE);
-    }
-}
 
 /* USER CODE END 4 */
 

@@ -157,11 +157,12 @@ void EepromEmulator_Init(void)
   * @retval True of False(If the object has been found, true).
   */
 Bool_t EepromEmulator_ReadObject(uint16_t objectId, uint16_t offset, uint16_t maxLength,
-                                 uint16_t *pLength, uint8_t *pData)
+                                 uint16_t *pLength, void *pData)
 {
   Entry_t entry;
   uint32_t addr;
   uint8_t object_found = FALSE;
+  uint8_t *__p_data = pData;
 
   // Check if half-word aligned.
   if (((offset & 0x0001U) != 0U) || ((maxLength & 0x0001U) != 0U))
@@ -239,7 +240,7 @@ Bool_t EepromEmulator_ReadObject(uint16_t objectId, uint16_t offset, uint16_t ma
     }
 
     addr = pActivePage->data_stack_address + entry.relative_address + offset;
-    flashRead(addr, pData, read_len);
+    flashRead(addr, __p_data, read_len);
 
     return TRUE;
   }
@@ -270,10 +271,11 @@ void EepromEmulator_DeleteObject(uint16_t objectId)
   *
   * @retval None.
   */
-void EepromEmulator_WriteObject(uint16_t objectId, uint16_t length, uint8_t *pData)
+void EepromEmulator_WriteObject(uint16_t objectId, uint16_t length, void *pData)
 {
   Entry_t entry;
   uint32_t addr;
+  uint8_t *__p_data = (uint8_t *)pData;
 
   // Check if half-word aligned.
   if ((length & 0x0001U) != 0U)
@@ -316,7 +318,7 @@ void EepromEmulator_WriteObject(uint16_t objectId, uint16_t length, uint8_t *pDa
   if (length)
   {
     addr = pActivePage->data_stack_address + pActivePage->data_stack_pointer;
-    flashWrite(addr, pData, length);
+    flashWrite(addr, __p_data, length);
 
     pActivePage->data_stack_pointer += length;
   }

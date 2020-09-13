@@ -6,7 +6,6 @@
 #ifndef __CPARSER_H
 #define __CPARSER_H
 
-#include "generic.h"
 #include "cparser_config.h"
 #include "dictionary.h"
 
@@ -59,7 +58,7 @@ extern "C"
 
     /* Functions ---------------------------------------------------------------*/
     extern void Cp_Reset(void);
-    extern void Cp_Register(Cp_Trigger_t *triggers, uint16_t numOfTriggers);
+    extern void Cp_Register(const Cp_Trigger_t *triggers, uint16_t numOfTriggers);
     extern uint8_t Cp_FeedLine(char *input, uint16_t length);
 
 #ifdef __cplusplus

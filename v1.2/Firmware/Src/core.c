@@ -545,7 +545,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
         float frequency;
 
         // Get duty.
-        duty = getDuty(pidExe(&TrackingPowerPid,
+        duty = getDuty(Pid_Exe(&TrackingPowerPid,
                               ((TrackingDestinationPower - power.real) / TrackingFullPower),
                               deltat));
 
@@ -554,8 +554,8 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
         tracking_measure = -power.img / power.real;
 
         // Get frequency.
-        frequency = pidExe(&TrackingFrequencyPid,
-                           clamp((tracking_measure), -1.0f, 1.0f), deltat) +
+        frequency = Pid_Exe(&TrackingFrequencyPid,
+                            clamp((tracking_measure), -1.0f, 1.0f), deltat) +
                     TrackingAnchorFrequency;
 
         updateClockCircuitry(frequency, duty);
@@ -612,7 +612,7 @@ inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
     static const float sine[] = {0.0f, 0.5f, 0.8660254037844386f, 1.0f, 0.8660254037844386f, 0.5f};
     uint16_t off;
     float sum[24] = {0.0f};
-    
+
     off = SIGNAL_PROCESSING_BLANKED_ELEMENT_COUNT * ADC_CHANNELS;
 
     // Sum elements which are to be multiplied with same modulation phase.
@@ -664,7 +664,7 @@ inline void getPhasors(uint16_t *bf, Complex_t *voltage, Complex_t *current)
         Complex_t vcalib;
         in = PwmFrequency / 1e4f;
 
-        Complex_PolyCalc(in, &CalPoly, &vcalib, CALIBRATION_POLY_DEGREE);
+        Complex_PolyCalc(in, CalPoly, &vcalib, CALIBRATION_POLY_DEGREE);
         Complex_Multiply(&v, &vcalib, &v);
     }
 
