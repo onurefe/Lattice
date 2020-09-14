@@ -2,15 +2,10 @@ import json
 import time
 import serial
 
-def loadFactoryData():
-    print("Enter factory configuration file path: ")
-    config_file = input()
-    print("Enter the serial port which device is connected")
-    
+def burnFactoryData(config_file = "config.json", serial_port = "/dev/ttyUSB0"):
     f = open(config_file, "r")
     cfg = json.loads(f.read())
-    sport = serial.Serial()
-    
+        
     # Search error detection parameters.
     if "error_detection_params" in cfg:
         error_detection_params_found = (("min_horn_impedance" in cfg["error_detection_params"]) and
@@ -138,5 +133,4 @@ def loadFactoryData():
     for cmd in cmds:
         print(cmd)
         print("Awaiting response..")
-        serial
         time.sleep(0.1)

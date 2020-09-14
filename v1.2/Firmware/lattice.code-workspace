@@ -6,6 +6,6 @@
     ],
     "settings": {
         "cortex-debug.armToolchainPath": "/home/onur/STM32Toolchain/gcc-arm-none-eabi-9-2020-q2-update/bin",
-        "cortex-debug.openocdPath": "/usr/bin/openocd"
+        "cortex-debug.openocdPath": "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/bin/openocd"
     }
 }

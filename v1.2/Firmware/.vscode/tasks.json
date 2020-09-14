@@ -93,10 +93,10 @@
         {
             "label": "CPU: Build, Download and run",
             "type": "shell",
-            "command": "/usr/bin/openocd",
+            "command": "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/bin/openocd",
             "args": [
                 "-f",
-                "/usr/share/openocd/scripts/interface/stlink-v2.cfg",
+                "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/scripts/interface/stlink-v2.cfg",
                 "-f",
                 ".vscode/stm32f3x.cfg",
                 "-c",
@@ -108,10 +108,10 @@
         {
             "label": "CPU: Download and run",
             "type": "shell",
-            "command": "/usr/bin/openocd",
+            "command": "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/bin/openocd",
             "args": [
                 "-f",
-                "/usr/share/openocd/scripts/interface/stlink-v2.cfg",
+                "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/scripts/interface/stlink-v2.cfg",
                 "-f",
                 ".vscode/stm32f3x.cfg",
                 "-c",
@@ -122,10 +122,10 @@
         {
             "label": "CPU: Reset and run",
             "type": "shell",
-            "command": "/usr/bin/openocd",
+            "command": "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/bin/openocd",
             "args": [
                 "-f",
-                "/usr/share/openocd/scripts/interface/stlink-v2.cfg",
+                "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/scripts/interface/stlink-v2.cfg",
                 "-f",
                 ".vscode/stm32f3x.cfg",
                 "-c init",
@@ -137,10 +137,10 @@
         {
             "label": "CPU: Halt",
             "type": "shell",
-            "command": "/usr/bin/openocd",
+            "command": "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/bin/openocd",
             "args": [
                 "-f",
-                "/usr/share/openocd/scripts/interface/stlink-v2.cfg",
+                "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/scripts/interface/stlink-v2.cfg",
                 "-f",
                 ".vscode/stm32f3x.cfg",
                 "-c init",
@@ -152,10 +152,10 @@
         {
             "label": "CPU: Run",
             "type": "shell",
-            "command": "/usr/bin/openocd",
+            "command": "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/bin/openocd",
             "args": [
                 "-f",
-                "/usr/share/openocd/scripts/interface/stlink-v2.cfg",
+                "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/scripts/interface/stlink-v2.cfg",
                 "-f",
                 ".vscode/stm32f3x.cfg",
                 "-c init",

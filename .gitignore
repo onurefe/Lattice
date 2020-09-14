@@ -2,3 +2,5 @@
 /v1.1/Firmware/build
 /v1.2/Firmware/build
 /v1.3/Firmware/build
+/Software/Lattice/__pycache__
+/Software/Lattice/*.pyc

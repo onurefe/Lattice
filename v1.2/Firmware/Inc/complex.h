@@ -111,6 +111,7 @@ inline void Complex_MultiplyReal(Complex_t *a, float value, Complex_t *result)
  */
 inline void Complex_Conjugate(Complex_t *a, Complex_t *result)
 {
+    result->real = a->real;
     result->img = -a->img;
 }
 

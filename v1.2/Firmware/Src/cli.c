@@ -6,7 +6,7 @@
 /* Private function prototypes ---------------------------------------------*/
 static void sendMsg(char *buff, uint16_t length);
 
-// Trigger callbacks.
+// Triggered callbacks.
 static void factoryCallback(Dictionary_t *params);
 static void setConstraintsCallback(Dictionary_t *params);
 static void getConstraintsCallback(Dictionary_t *params);
@@ -359,7 +359,7 @@ void getConstraintsCallback(Dictionary_t *params)
 
     // Get constraints. If they are set, send response.
     ret = Lattice_GetConstraints(&max_power, &min_loading, &max_loading) ? 1 : 0;
-    length = snprintf(Buffer, sizeof(Buffer), "cstr-gr R%d P%f N%f X%f",
+    length = snprintf(Buffer, sizeof(Buffer), "cstr-gr R%d P%.2f N%.2f X%.2f",
                       ret, max_power, min_loading, max_loading);
 
     sendMsg(Buffer, length);
@@ -456,7 +456,7 @@ void getSearchParametersCallback(Dictionary_t *params)
     uint8_t ret;
 
     ret = Lattice_GetSearchingParams(&normalized_power, &steps) ? 1 : 0;
-    length = snprintf(Buffer, sizeof(Buffer), "srcpms-gr R%d P%f S%d",
+    length = snprintf(Buffer, sizeof(Buffer), "srcpms-gr R%d P%.2f S%d",
                       ret, normalized_power, steps);
 
     sendMsg(Buffer, length);
@@ -519,7 +519,7 @@ void getErrorDetectionParametersCallback(Dictionary_t *params)
     ret = Lattice_GetErrorDetectionParams(&min_horn_imp, &max_horn_imp, &power_track_tolerance,
                                           &freq_track_tolerance, &monitoring_period, &timeout);
     ret = ret ? 1 : 0;
-    length = snprintf(Buffer, sizeof(Buffer), "errdet-gr R%d N%f X%f P%f F%f R%f T%f",
+    length = snprintf(Buffer, sizeof(Buffer), "errdet-gr R%d N%.2f X%.2f P%.2f F%.2f R%.2f T%.2f",
                       ret, min_horn_imp, max_horn_imp, power_track_tolerance,
                       freq_track_tolerance, monitoring_period, timeout);
 
@@ -569,7 +569,7 @@ void getPowerTrackingPidCoeffsCallback(Dictionary_t *params)
     uint8_t ret;
 
     ret = Lattice_GetFrequencyTrackingPidCoeffs(&kp, &ki, &kd, &tf) ? 1 : 0;
-    length = snprintf(Buffer, sizeof(Buffer), "prpid-gr R%d P%f I%f D%f T%f",
+    length = snprintf(Buffer, sizeof(Buffer), "prpid-gr R%d P%.2f I%.2f D%.2f T%.2f",
                       ret, kp, ki, kd, tf);
 
     sendMsg(Buffer, length);
@@ -620,7 +620,7 @@ void getFrequencyTrackingPidCoeffsCallback(Dictionary_t *params)
     uint8_t ret;
 
     ret = Lattice_GetFrequencyTrackingPidCoeffs(&kp, &ki, &kd, &tf) ? 1 : 0;
-    length = snprintf(Buffer, sizeof(Buffer), "frpid-gr R%d P%f I%f D%f T%f",
+    length = snprintf(Buffer, sizeof(Buffer), "frpid-gr R%d P%.2f I%.2f D%.2f T%.2f",
                       ret, kp, ki, kd, tf);
 
     sendMsg(Buffer, length);
@@ -660,7 +660,7 @@ void getDestinationPowerCallback(Dictionary_t *params)
     uint8_t ret;
 
     ret = Lattice_GetDestinationPower(&dest_power) ? 1 : 0;
-    length = snprintf(Buffer, sizeof(Buffer), "power-gr R%d P%f",
+    length = snprintf(Buffer, sizeof(Buffer), "power-gr R%d P%.2f",
                       ret, dest_power);
 
     sendMsg(Buffer, length);
