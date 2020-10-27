@@ -31,30 +31,30 @@ static void cropJerk(char *input, uint8_t start_idx, uint8_t length, uint8_t *st
 static uint8_t getLength(const char *input);
 
 /* Private variables -------------------------------------------------------*/
-static const Cp_Trigger_t *TriggerTable[CPARSER_CONFIG_MAX_NUM_OF_TRIGGERS];
-static uint16_t NumOfTriggers = 0;
+static const Cp_Command_t *CommandTable[CPARSER_CONFIG_MAX_NUM_OF_COMMANDS];
+static uint16_t NumOfCommands = 0;
 static Dictionary_t ParameterDictionary;
 
 /* Exported functions ------------------------------------------------------*/
 /**
- * @brief Clears the trigger parser registry.
+ * @brief Clears the command parser registry.
  */
 void Cp_Reset(void)
 {
-    NumOfTriggers = 0;
+    NumOfCommands = 0;
 }
 
 /**
- * @brief Registers a trigger.
+ * @brief Registers a command.
  * 
- * @param triggers: Pointer to the trigger array.
- * @param numOfTriggers: Number of triggers to be registered.
+ * @param commands: Pointer to the command array.
+ * @param numOfCommands: Number of triggers to be registered.
  */
-void Cp_Register(const Cp_Trigger_t *triggers, uint16_t numOfTriggers)
+void Cp_Register(const Cp_Command_t *commands, uint16_t numOfCommands)
 {
-    for (uint16_t i = 0; i < numOfTriggers; i++)
+    for (uint16_t i = 0; i < numOfCommands; i++)
     {
-        TriggerTable[NumOfTriggers++] = &triggers[i];
+        CommandTable[NumOfCommands++] = &commands[i];
     }
 }
 
@@ -78,20 +78,20 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
         return FALSE;
     }
 
-    // Find trigger.
-    const Cp_Trigger_t *trigger = NULL;
-    for (uint8_t i = 0; i < NumOfTriggers; i++)
+    // Find command name.
+    const Cp_Command_t *command = NULL;
+    for (uint8_t i = 0; i < NumOfCommands; i++)
     {
-        if (doesMatch(TriggerTable[i]->name, &input[fields[0].start],
+        if (doesMatch(CommandTable[i]->name, &input[fields[0].start],
                       fields[0].length))
         {
-            trigger = TriggerTable[i];
+            command = CommandTable[i];
             break;
         }
     }
 
-    // If the trigger is not found; return FALSE.
-    if (!trigger)
+    // If the command is not found; return FALSE.
+    if (!command)
     {
         return FALSE;
     }
@@ -104,7 +104,7 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
     uint16_t bulk_data_size = 0;
 
     // Find params and parse their values.
-    for (uint8_t i = 0; i < trigger->numOfParams; i++)
+    for (uint8_t i = 0; i < command->numOfParams; i++)
     {
         for (uint8_t j = 1; j < field_count; j++)
         {
@@ -112,14 +112,14 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
 
             // If parameter is found; it should be parsed and added to the dictionary. Then next parameter
             //should be searched.
-            if (input[fields[j].start] == trigger->params[i].letter)
+            if (input[fields[j].start] == command->params[i].letter)
             {
                 if (parseValue(&input[fields[j].start + 1], fields[j].length - 1,
-                               trigger->params[i].type, &bulk_data[bulk_data_size], &param_size))
+                               command->params[i].type, &bulk_data[bulk_data_size], &param_size))
                 {
                     // Add parameter to dictionary.
-                    Dictionary_Add(&ParameterDictionary, trigger->params[i].letter,
-                                   trigger->params[i].type, &bulk_data[bulk_data_size]);
+                    Dictionary_Add(&ParameterDictionary, command->params[i].letter,
+                                   command->params[i].type, &bulk_data[bulk_data_size]);
                     bulk_data_size += param_size;
 
                     break;
@@ -133,7 +133,7 @@ uint8_t Cp_FeedLine(char *input, uint16_t length)
     }
 
     // Call related callback.
-    trigger->callback(&ParameterDictionary);
+    command->callback(&ParameterDictionary);
 
     return TRUE;
 }

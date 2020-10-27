@@ -46,7 +46,7 @@ extern "C"
      */
     typedef struct
     {
-        const char name[CPARSER_CONFIG_MAX_TRIGGER_NAME_LENGTH + 1];
+        const char name[CPARSER_CONFIG_MAX_COMMAND_NAME_LENGTH + 1];
         /**< Null terminated trigger name string */
         const Cp_Param_t params[CPARSER_CONFIG_MAX_NUM_OF_PARAMS];
         /**< Array of parameters */
@@ -54,11 +54,11 @@ extern "C"
         /**< Parsed callback function pointer */
         const uint8_t numOfParams;
         /**< Number of parameters */
-    } Cp_Trigger_t;
+    } Cp_Command_t;
 
     /* Functions ---------------------------------------------------------------*/
     extern void Cp_Reset(void);
-    extern void Cp_Register(const Cp_Trigger_t *triggers, uint16_t numOfTriggers);
+    extern void Cp_Register(const Cp_Command_t *commands, uint16_t numOfCommands);
     extern uint8_t Cp_FeedLine(char *input, uint16_t length);
 
 #ifdef __cplusplus

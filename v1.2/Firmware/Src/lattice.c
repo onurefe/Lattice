@@ -13,16 +13,9 @@ typedef struct
 typedef struct
 {
     float maxPower;
-    float minLoading;
-    float maxLoading;
+    float minFrequency;
+    float maxFrequency;
 } Constraints_t;
-
-typedef struct
-{
-    uint32_t deviceId;
-    uint16_t versionMajor;
-    uint16_t versionMinor;
-} DeviceInfo_t;
 
 typedef struct
 {
@@ -44,7 +37,6 @@ typedef struct
 {
     Bool_t calibration : 1;
     Bool_t constraints : 1;
-    Bool_t deviceInfo : 1;
     Bool_t searchingParams : 1;
     Bool_t errorDetectionParams : 1;
     Bool_t powerTrackingPidParams : 1;
@@ -55,25 +47,22 @@ typedef struct
 enum
 {
     EVENT_CALIBRATE = (1 << 0),
-    EVENT_DESTINATION_POWER_SET = (1 << 1),
-    EVENT_SCAN_COMPLETED = (1 << 2),
-    EVENT_SEARCH_COMPLETED = (1 << 3),
-    EVENT_FACTORY_MODE = (1 << 4),
-    EVENT_ERROR_OCCURRED = (1 << 5)
+    EVENT_SCAN_COMPLETED = (1 << 1),
+    EVENT_SEARCH_COMPLETED = (1 << 2),
+    EVENT_FACTORY_MODE = (1 << 3),
+    EVENT_ERROR_OCCURRED = (1 << 4)
 };
 typedef uint8_t Events_t;
 
 /* Private variables -------------------------------------------------------*/
 // State machine variables.
-static Lattice_Status_t Status = LATTICE_STATUS_FACTORY_CONFIG;
+static Lattice_Status_t Status = LATTICE_STATUS_CONFIG;
 static Lattice_Error_t Error;
 static Events_t Events;
-static FactoryFlags_t Flags;
 
 // Factory configured data.
 static Calibration_t Calibration;
 static Constraints_t Constraints;
-static DeviceInfo_t DeviceInfo;
 static SearchingParams_t SearchingParams;
 static ErrorDetectionParams_t ErrorDetectionParams;
 static Pid_Params_t PowerTrackingPidParams;
@@ -84,8 +73,6 @@ static float TrackingDestinationPower; // User can overwrite the destination pow
 static float ResonanceFrequency;
 static float ResonanceImpedance;
 static float FullPower;
-static Bool_t ReportingEnabled;
-static Bool_t PostponedDestPowerEepromWrite;
 static uint8_t HornImpedanceOutofWindowsSuccessiveErrors;
 static uint8_t PowerTrackingSuccessiveErrors;
 static uint8_t FrequencyTrackingSuccessiveErrors;
@@ -96,7 +83,6 @@ static float ScanImpedanceReal[CALIBRATION_NUM_OF_SAMPLES];
 static float ScanImpedanceImg[CALIBRATION_NUM_OF_SAMPLES];
 
 /* Private function prototypes ---------------------------------------------*/
-int32_t hash(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor);
 void calculateCalibrationPolynomials(float *scanImpReal, float *scanImpImg,
                                      float calibrationResistance, Complex_t *coeffs);
 void startTracking(void);
@@ -108,61 +94,101 @@ void startTracking(void);
  */
 void Lattice_Start(void)
 {
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
+    if (Status != LATTICE_STATUS_CONFIG)
     {
         return;
     }
 
-    Error = LATTICE_ERROR_NONE;
-    ReportingEnabled = FALSE;
-    PostponedDestPowerEepromWrite = FALSE;
+    FactoryFlags_t flags;
 
     // Load burned data.
-    Flags.calibration = EepromEmulator_ReadObject(LATTICE_CALIBRATION_POLY_EEID, 0,
+    flags.calibration = EepromEmulator_ReadObject(LATTICE_CALIBRATION_POLY_EEID, 0,
                                                   sizeof(Calibration),
                                                   NULL, &Calibration);
-    Flags.constraints = EepromEmulator_ReadObject(LATTICE_CONSTRAINTS_EEID, 0,
+    flags.constraints = EepromEmulator_ReadObject(LATTICE_CONSTRAINTS_EEID, 0,
                                                   sizeof(Constraints), NULL, &Constraints);
-    Flags.deviceInfo = EepromEmulator_ReadObject(LATTICE_DEVICE_INFO_EEID, 0,
-                                                 sizeof(DeviceInfo), NULL, &DeviceInfo);
-    Flags.searchingParams = EepromEmulator_ReadObject(LATTICE_SEARCHING_PARAMS_EEID, 0,
+    flags.searchingParams = EepromEmulator_ReadObject(LATTICE_SEARCHING_PARAMS_EEID, 0,
                                                       sizeof(SearchingParams), NULL,
                                                       &SearchingParams);
-    Flags.errorDetectionParams = EepromEmulator_ReadObject(LATTICE_ERROR_DETECTION_PARAMS_EEID, 0,
+    flags.errorDetectionParams = EepromEmulator_ReadObject(LATTICE_ERROR_DETECTION_PARAMS_EEID, 0,
                                                            sizeof(ErrorDetectionParams), NULL,
                                                            &ErrorDetectionParams);
-    Flags.powerTrackingPidParams = EepromEmulator_ReadObject(LATTICE_POWER_TRACKING_PID_PARAMS_EEID, 0,
+    flags.powerTrackingPidParams = EepromEmulator_ReadObject(LATTICE_POWER_TRACKING_PID_PARAMS_EEID, 0,
                                                              sizeof(PowerTrackingPidParams), NULL,
                                                              &PowerTrackingPidParams);
-    Flags.frequencyTrackingPidParams = EepromEmulator_ReadObject(LATTICE_FREQUENCY_TRACKING_PID_PARAMS_EEID, 0,
+    flags.frequencyTrackingPidParams = EepromEmulator_ReadObject(LATTICE_FREQUENCY_TRACKING_PID_PARAMS_EEID, 0,
                                                                  sizeof(FrequencyTrackingPidParams), NULL,
                                                                  &FrequencyTrackingPidParams);
-    Flags.trackingDestinationPower = EepromEmulator_ReadObject(LATTICE_TRACKING_DESTINATION_POWER_EEID, 0,
+    flags.trackingDestinationPower = EepromEmulator_ReadObject(LATTICE_TRACKING_DESTINATION_POWER_EEID, 0,
                                                                sizeof(TrackingDestinationPower), NULL,
                                                                &TrackingDestinationPower);
-
-    // Check if factory configuration completed. If it is, device can operate
-    //as configured. If not configured, put device into the factory mode.
-    if (Flags.calibration && Flags.constraints && Flags.deviceInfo && Flags.searchingParams &&
-        Flags.errorDetectionParams && Flags.powerTrackingPidParams && Flags.frequencyTrackingPidParams &&
-        Flags.trackingDestinationPower)
+    /* Load default value if not set. */
+    if (!flags.calibration)
     {
-        Core_Init(Calibration.calibrationPoly, LATTICE_MIN_FREQUENCY,
-                  LATTICE_MAX_FREQUENCY, Constraints.minLoading,
-                  Constraints.maxLoading);
+        float a[3] = DEFAULT_CALIBRATION_POLY_REAL;
+        float b[3] = DEFAULT_CALIBRATION_POLY_IMG;
 
-        // Start searching for the resonance frequency.
-        Core_Search(SearchingParams.normalizedPower,
-                    LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY, SearchingParams.steps);
-
-        Status = LATTICE_STATUS_OPERATING_SEARCHING;
-    }
-    else
-    {
-        Core_Init(NULL, LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY, 0.0f,
-                  1.0f);
+        Calibration.calibrationPoly[0].real = a[0];
+        Calibration.calibrationPoly[0].img = b[0];
+        Calibration.calibrationPoly[1].real = a[1];
+        Calibration.calibrationPoly[1].img = b[1];
+        Calibration.calibrationPoly[2].real = a[2];
+        Calibration.calibrationPoly[2].img = b[2];
     }
 
+    if (!flags.constraints)
+    {
+        Constraints.maxPower = DEFAULT_CONSTR_MAX_POWER;
+        Constraints.minFrequency = DEFAULT_CONSTR_MIN_FREQ;
+        Constraints.maxFrequency = DEFAULT_CONSTR_MAX_FREQ;
+    }
+
+    if (!flags.searchingParams)
+    {
+        SearchingParams.normalizedPower = DEFAULT_SEARCHING_NORMALIZED_POWER;
+        SearchingParams.steps = DEFAULT_SEARCHING_STEPS;
+    }
+
+    if (!flags.errorDetectionParams)
+    {
+        ErrorDetectionParams.minHornImpedance = DEFAULT_ERRDET_MIN_HORN_IMPEDANCE;
+        ErrorDetectionParams.maxHornImpedance = DEFAULT_ERRDET_MAX_HORN_IMPEDANCE;
+        ErrorDetectionParams.frequencyTrackingTolerance = DEFAULT_ERRDET_FREQ_TRACKING_TOLERANCE;
+        ErrorDetectionParams.powerTrackingTolerance = DEFAULT_ERRDET_POWER_TRACKING_TOLERANCE;
+        ErrorDetectionParams.monitoringPeriod = DEFAULT_ERRDET_MONITORING_PERIOD;
+        ErrorDetectionParams.timeout = DEFAULT_ERRDET_TIMEOUT;
+    }
+
+    if (!flags.powerTrackingPidParams)
+    {
+        PowerTrackingPidParams.tfilt = DEFAULT_PTRACK_PID_TF;
+        PowerTrackingPidParams.kp = DEFAULT_PTRACK_PID_KP;
+        PowerTrackingPidParams.ki = DEFAULT_PTRACK_PID_KI;
+        PowerTrackingPidParams.kd = DEFAULT_PTRACK_PID_KD;
+    }
+
+    if (!flags.frequencyTrackingPidParams)
+    {
+        FrequencyTrackingPidParams.tfilt = DEFAULT_FTRACK_PID_TF;
+        FrequencyTrackingPidParams.kp = DEFAULT_FTRACK_PID_KP;
+        FrequencyTrackingPidParams.ki = DEFAULT_FTRACK_PID_KI;
+        FrequencyTrackingPidParams.kd = DEFAULT_FTRACK_PID_KD;
+    }
+
+    if (!flags.trackingDestinationPower)
+    {
+        TrackingDestinationPower = DEFAULT_DESTINATION_POWER;
+    }
+
+    Core_Init(Calibration.calibrationPoly, Constraints.minFrequency,
+              Constraints.maxFrequency, MIN_NORMALIZED_POWER, MAX_NORMALIZED_POWER);
+
+    // Start searching for the resonance frequency.
+    Core_Search(SearchingParams.normalizedPower,
+                Constraints.minFrequency, Constraints.maxFrequency, SearchingParams.steps);
+
+    Status = LATTICE_STATUS_SEARCHING;
+    Error = LATTICE_ERROR_NONE;
     Events = 0;
 }
 
@@ -177,8 +203,8 @@ void Lattice_Execute(void)
     //into error mode.
     if (Events & EVENT_ERROR_OCCURRED)
     {
-        if ((Status == LATTICE_STATUS_OPERATING_SEARCHING) ||
-            (Status == LATTICE_STATUS_OPERATING_TRACKING))
+        if ((Status == LATTICE_STATUS_SEARCHING) ||
+            (Status == LATTICE_STATUS_TRACKING))
         {
             Core_Stop();
 
@@ -192,64 +218,27 @@ void Lattice_Execute(void)
     if (Events & EVENT_FACTORY_MODE)
     {
         // If core is operating stop the core.
-        if ((Status == LATTICE_STATUS_OPERATING_SEARCHING) ||
-            (Status == LATTICE_STATUS_OPERATING_TRACKING) ||
-            (Status == LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING))
+        if ((Status == LATTICE_STATUS_SEARCHING) ||
+            (Status == LATTICE_STATUS_TRACKING) ||
+            (Status == LATTICE_STATUS_CALIBRATING))
         {
             Core_Stop();
         }
 
         // Put device to pending factory initialization.
-        Status = LATTICE_STATUS_FACTORY_CONFIG;
+        Status = LATTICE_STATUS_CONFIG;
         Events ^= EVENT_FACTORY_MODE;
-    }
-
-    // If destination power is set.
-    if (Events & EVENT_DESTINATION_POWER_SET)
-    {
-        // If the device is at tracking state; writing to the
-        //eeprom emulator should interrupt the process.
-        if (Status == LATTICE_STATUS_OPERATING_TRACKING)
-        {
-            // Stop tracking.
-            Core_Stop();
-
-            EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
-                                       sizeof(TrackingDestinationPower),
-                                       &TrackingDestinationPower);
-
-            // Start tracking.
-            startTracking();
-        }
-
-        // Postpone tracking power eeprom write operation.
-        if (Status == LATTICE_STATUS_OPERATING_SEARCHING)
-        {
-            PostponedDestPowerEepromWrite = TRUE;
-        }
-
-        Events ^= EVENT_DESTINATION_POWER_SET;
     }
 
     // Handle search completed event.
     if (Events & EVENT_SEARCH_COMPLETED)
     {
-        if (Status == LATTICE_STATUS_OPERATING_SEARCHING)
+        if (Status == LATTICE_STATUS_SEARCHING)
         {
-            // Update tracking destination power if postponed.
-            if (PostponedDestPowerEepromWrite)
-            {
-                EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
-                                           sizeof(TrackingDestinationPower),
-                                           &TrackingDestinationPower);
-
-                PostponedDestPowerEepromWrite = FALSE;
-            }
-
             // Start tracking.
             startTracking();
 
-            Status = LATTICE_STATUS_OPERATING_TRACKING;
+            Status = LATTICE_STATUS_TRACKING;
         }
 
         Events ^= EVENT_SEARCH_COMPLETED;
@@ -258,13 +247,13 @@ void Lattice_Execute(void)
     // Handle calibration command event.
     if (Events & EVENT_CALIBRATE)
     {
-        if (Status == LATTICE_STATUS_FACTORY_CONFIG)
+        if (Status == LATTICE_STATUS_CONFIG)
         {
             // Start scanning.
-            Core_Scan(LATTICE_MIN_FREQUENCY, LATTICE_MAX_FREQUENCY,
-                      CALIBRATION_NUM_OF_SAMPLES, ScanImpedanceReal, ScanImpedanceImg);
+            Core_Scan(MIN_FREQUENCY, MAX_FREQUENCY, CALIBRATION_NUM_OF_SAMPLES,
+                      ScanImpedanceReal, ScanImpedanceImg);
 
-            Status = LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING;
+            Status = LATTICE_STATUS_CALIBRATING;
         }
 
         Events ^= EVENT_CALIBRATE;
@@ -273,7 +262,7 @@ void Lattice_Execute(void)
     // Handle scan completed event.
     if (Events & EVENT_SCAN_COMPLETED)
     {
-        if (Status == LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING)
+        if (Status == LATTICE_STATUS_CALIBRATING)
         {
             Complex_t coeffs[CALIBRATION_POLY_DEGREE + 1];
 
@@ -284,10 +273,8 @@ void Lattice_Execute(void)
             EepromEmulator_WriteObject(LATTICE_CALIBRATION_POLY_EEID, sizeof(Calibration_t),
                                        (uint8_t *)&Calibration);
 
-            Flags.calibration = TRUE;
-
             // Return to factory parameter setup.
-            Status = LATTICE_STATUS_FACTORY_CONFIG;
+            Status = LATTICE_STATUS_CONFIG;
         }
 
         // Clear scan completed event.
@@ -296,106 +283,186 @@ void Lattice_Execute(void)
 }
 
 /***
- * @brief Sets constraint variables which the device should obey.
+ * @brief Puts the device into the factory mode.
  * 
- * @param maxPower: Maximum power which device can deliver.
- * @param minLoading: Minimum loading value. From 0.0 to 1.0
- * @param maxLoading: Maximum loading value. From 0.0 to 1.0
- * 
- * @retval Operation result; either TRUE or FALSE.
- */
-Bool_t Lattice_SetConstraints(float maxPower, float minLoading, float maxLoading)
-{
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
-    {
-        return FALSE;
-    }
-
-    if ((minLoading >= 0.0f) && (maxLoading <= 1.0f))
-    {
-        Constraints.maxPower = maxPower;
-        Constraints.minLoading = minLoading;
-        Constraints.maxLoading = maxLoading;
-
-        EepromEmulator_WriteObject(LATTICE_CONSTRAINTS_EEID, sizeof(Constraints),
-                                   &Constraints);
-        Flags.constraints = TRUE;
-        return TRUE;
-    }
-    else
-    {
-        return FALSE;
-    }
-}
-
-/***
- * @brief Gets constraint variables.
- * 
- * @param maxPower: Pointer to return maximum power.
- * @param minLoading: Pointer to return minimum loading.
- * @param maxLoading: Pointer to return maximum loading.
+ * @param password: Password generated by the hash function with device 
+ * information.
  * 
  * @retval Operation result: either TRUE or FALSE.
  */
-Bool_t Lattice_GetConstraints(float *maxPower, float *minLoading, float *maxLoading)
+Bool_t Lattice_ConfigMode(int32_t password)
 {
-    if (Flags.constraints)
+    // If device info is not set; the device is already authorized.
+    if (Status == LATTICE_STATUS_CONFIG)
     {
-        *maxPower = Constraints.maxPower;
-        *minLoading = Constraints.minLoading;
-        *maxLoading = Constraints.maxLoading;
-
         return TRUE;
     }
-    else
-    {
-        return FALSE;
-    }
-}
 
-/***
- * @brief Sets device info variables.
- * 
- * @param deviceId: Id of the device.
- * @param versionMajor: Firmware major version.
- * @param versionMinor: Firmware minor version.
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_SetDeviceInfo(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
-{
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
+    // Check password.
+    if (password != CONFIG_PASSWORD)
     {
         return FALSE;
     }
 
-    DeviceInfo.deviceId = deviceId;
-    DeviceInfo.versionMajor = versionMajor;
-    DeviceInfo.versionMinor = versionMinor;
-
-    EepromEmulator_WriteObject(LATTICE_DEVICE_INFO_EEID, sizeof(DeviceInfo_t),
-                               &DeviceInfo);
-    Flags.deviceInfo = TRUE;
+    Events |= EVENT_FACTORY_MODE;
 
     return TRUE;
 }
 
 /***
- * @brief Gets the device info variables.
+ * @brief Loads default values to configurable parameters.
  * 
- * @param deviceId: Pointer to return the device id.
- * @param versionMajor: Pointer to return the firmware major version.
- * @param versiomMinor: Pointer to return the firmware minor version.
+ * @retval Operation result(TRUE or FALSE).
+ */
+Bool_t Lattice_LoadDefaults(void)
+{
+    if (Status != LATTICE_STATUS_CONFIG)
+    {
+        return FALSE;
+    }
+
+    {
+        float a[3] = DEFAULT_CALIBRATION_POLY_REAL;
+        float b[3] = DEFAULT_CALIBRATION_POLY_IMG;
+
+        Calibration.calibrationPoly[0].real = a[0];
+        Calibration.calibrationPoly[0].img = b[0];
+        Calibration.calibrationPoly[1].real = a[1];
+        Calibration.calibrationPoly[1].img = b[1];
+        Calibration.calibrationPoly[2].real = a[2];
+        Calibration.calibrationPoly[2].img = b[2];
+    }
+    EepromEmulator_DeleteObject(LATTICE_CALIBRATION_POLY_EEID);
+
+    {
+        Constraints.maxPower = DEFAULT_CONSTR_MAX_POWER;
+        Constraints.minFrequency = DEFAULT_CONSTR_MIN_FREQ;
+        Constraints.maxFrequency = DEFAULT_CONSTR_MAX_FREQ;
+    }
+    EepromEmulator_DeleteObject(LATTICE_CONSTRAINTS_EEID);
+
+    {
+        SearchingParams.normalizedPower = DEFAULT_SEARCHING_NORMALIZED_POWER;
+        SearchingParams.steps = DEFAULT_SEARCHING_STEPS;
+    }
+    EepromEmulator_DeleteObject(LATTICE_SEARCHING_PARAMS_EEID);
+
+    {
+        ErrorDetectionParams.minHornImpedance = DEFAULT_ERRDET_MIN_HORN_IMPEDANCE;
+        ErrorDetectionParams.maxHornImpedance = DEFAULT_ERRDET_MAX_HORN_IMPEDANCE;
+        ErrorDetectionParams.frequencyTrackingTolerance = DEFAULT_ERRDET_FREQ_TRACKING_TOLERANCE;
+        ErrorDetectionParams.powerTrackingTolerance = DEFAULT_ERRDET_POWER_TRACKING_TOLERANCE;
+        ErrorDetectionParams.monitoringPeriod = DEFAULT_ERRDET_MONITORING_PERIOD;
+        ErrorDetectionParams.timeout = DEFAULT_ERRDET_TIMEOUT;
+    }
+    EepromEmulator_DeleteObject(LATTICE_ERROR_DETECTION_PARAMS_EEID);
+
+    {
+        PowerTrackingPidParams.tfilt = DEFAULT_PTRACK_PID_TF;
+        PowerTrackingPidParams.kp = DEFAULT_PTRACK_PID_KP;
+        PowerTrackingPidParams.ki = DEFAULT_PTRACK_PID_KI;
+        PowerTrackingPidParams.kd = DEFAULT_PTRACK_PID_KD;
+    }
+    EepromEmulator_DeleteObject(LATTICE_POWER_TRACKING_PID_PARAMS_EEID);
+
+    {
+        FrequencyTrackingPidParams.tfilt = DEFAULT_FTRACK_PID_TF;
+        FrequencyTrackingPidParams.kp = DEFAULT_FTRACK_PID_KP;
+        FrequencyTrackingPidParams.ki = DEFAULT_FTRACK_PID_KI;
+        FrequencyTrackingPidParams.kd = DEFAULT_FTRACK_PID_KD;
+    }
+    EepromEmulator_DeleteObject(LATTICE_FREQUENCY_TRACKING_PID_PARAMS_EEID);
+
+    {
+        TrackingDestinationPower = DEFAULT_DESTINATION_POWER;
+    }
+    EepromEmulator_DeleteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID);
+
+    return TRUE;
+}
+
+/***
+ * @brief Invokes calibration procedure.
  * 
  * @retval Operation result: either TRUE or FALSE.
  */
-Bool_t Lattice_GetDeviceInfo(uint32_t *deviceId, uint16_t *versionMajor, uint16_t *versionMinor)
+Bool_t Lattice_Calibrate(void)
 {
-    if (Flags.deviceInfo)
+    if (Status != LATTICE_STATUS_CONFIG)
     {
-        *deviceId = DeviceInfo.deviceId;
-        *versionMajor = DeviceInfo.versionMajor;
-        *versionMinor = DeviceInfo.versionMinor;
+        return FALSE;
+    }
+
+    Events |= EVENT_CALIBRATE;
+
+    return TRUE;
+}
+
+/***
+ * @brief Soft resets the system.
+ */
+void Lattice_Reset(void)
+{
+    // Reset the system.
+    HAL_NVIC_SystemReset();
+}
+
+/***
+ * @brief Sets calibration polynomial. 
+ *
+ * @param a0: Real part zeroth order term coefficient.
+ * @param a1: Real part first order term coefficient.
+ * @param a2: Real part second order term coefficient.
+ * @param b0: Imaginary part zeroth order term coefficient.
+ * @param b1: Imaginary part first order term coefficient.
+ * @param b2: Imaginary part second order term coefficient.
+ *
+ * @retval Operation result(TRUE or FALSE).
+ */
+Bool_t Lattice_SetCalibrationPolynomial(float a0, float a1, float a2, float b0, float b1,
+                                        float b2)
+{
+    if (Status != LATTICE_STATUS_CONFIG)
+    {
+        return FALSE;
+    }
+
+    Calibration.calibrationPoly[0].real = a0;
+    Calibration.calibrationPoly[0].img = b0;
+    Calibration.calibrationPoly[1].real = a1;
+    Calibration.calibrationPoly[1].img = b1;
+    Calibration.calibrationPoly[2].real = a2;
+    Calibration.calibrationPoly[2].img = b2;
+
+    EepromEmulator_WriteObject(LATTICE_CALIBRATION_POLY_EEID, sizeof(Calibration_t), &Calibration);
+
+    return TRUE;
+}
+
+/***
+ * @brief Sets constraint variables which the device should obey.
+ * 
+ * @param maxPower: Maximum power which device can deliver.
+ * @param minFrequency: Minimum frequency value.
+ * @param maxFrequency: Maximum frequency value.
+ * 
+ * @retval Operation result; either TRUE or FALSE.
+ */
+Bool_t Lattice_SetConstraints(float maxPower, float minFrequency, float maxFrequency)
+{
+    if (Status != LATTICE_STATUS_CONFIG)
+    {
+        return FALSE;
+    }
+
+    if ((minFrequency >= MIN_FREQUENCY) && (maxFrequency <= MAX_FREQUENCY))
+    {
+        Constraints.maxPower = maxPower;
+        Constraints.minFrequency = minFrequency;
+        Constraints.maxFrequency = maxFrequency;
+
+        EepromEmulator_WriteObject(LATTICE_CONSTRAINTS_EEID, sizeof(Constraints),
+                                   &Constraints);
 
         return TRUE;
     }
@@ -417,7 +484,7 @@ Bool_t Lattice_GetDeviceInfo(uint32_t *deviceId, uint16_t *versionMajor, uint16_
  */
 Bool_t Lattice_SetSearchingParams(float normalizedPower, uint16_t steps)
 {
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
+    if (Status != LATTICE_STATUS_CONFIG)
     {
         return FALSE;
     }
@@ -429,30 +496,6 @@ Bool_t Lattice_SetSearchingParams(float normalizedPower, uint16_t steps)
 
         EepromEmulator_WriteObject(LATTICE_SEARCHING_PARAMS_EEID,
                                    sizeof(SearchingParams_t), &SearchingParams);
-
-        Flags.searchingParams = TRUE;
-        return TRUE;
-    }
-    else
-    {
-        return FALSE;
-    }
-}
-
-/***
- * @brief Gets searching parameters.
- * 
- * @param normalizedPower: Pointer to return the normalized searching power.
- * @param steps: Point to return the number of steps.
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps)
-{
-    if (Flags.searchingParams)
-    {
-        *normalizedPower = SearchingParams.normalizedPower;
-        *steps = SearchingParams.steps;
 
         return TRUE;
     }
@@ -479,7 +522,7 @@ Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpe
                                        float powerTrackingTolerance, float frequencyTrackingTolerance,
                                        float monitoringPeriod, float timeout)
 {
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
+    if (Status != LATTICE_STATUS_CONFIG)
     {
         return FALSE;
     }
@@ -495,8 +538,6 @@ Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpe
         ErrorDetectionParams.monitoringPeriod = monitoringPeriod;
         ErrorDetectionParams.timeout = timeout;
 
-        Flags.errorDetectionParams = TRUE;
-
         EepromEmulator_WriteObject(LATTICE_ERROR_DETECTION_PARAMS_EEID, sizeof(ErrorDetectionParams),
                                    &ErrorDetectionParams);
 
@@ -506,37 +547,6 @@ Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpe
     {
         return FALSE;
     }
-
-    return TRUE;
-}
-
-/***
- * @brief Gets error detection parameters.
- * 
- * @param minHornImpedance: Pointer to return minimum horn impedance.
- * @param maxHornImpedance: Pointer to return maximum horn impedance.
- * @param powerTrackingTolerance: Pointer to return power tracking tolerance.
- * @param frequencyTrackingTolerance: Pointer to return frequency tracking tolerance.
- * @param monitoringPeriod: Pointer to return monitoring period value.
- * @param timeout: Pointer to return timeout value.
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
-                                       float *powerTrackingTolerance, float *frequencyTrackingTolerance,
-                                       float *monitoringPeriod, float *timeout)
-{
-    if (!Flags.errorDetectionParams)
-    {
-        return FALSE;
-    }
-
-    *minHornImpedance = ErrorDetectionParams.minHornImpedance;
-    *maxHornImpedance = ErrorDetectionParams.maxHornImpedance;
-    *powerTrackingTolerance = ErrorDetectionParams.powerTrackingTolerance;
-    *frequencyTrackingTolerance = ErrorDetectionParams.frequencyTrackingTolerance;
-    *monitoringPeriod = ErrorDetectionParams.monitoringPeriod;
-    *timeout = ErrorDetectionParams.timeout;
 
     return TRUE;
 }
@@ -553,7 +563,7 @@ Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornIm
  */
 Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf)
 {
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
+    if (Status != LATTICE_STATUS_CONFIG)
     {
         return FALSE;
     }
@@ -565,38 +575,9 @@ Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf)
         PowerTrackingPidParams.kd = kd;
         PowerTrackingPidParams.tfilt = tf;
 
-        Flags.powerTrackingPidParams = TRUE;
-
         EepromEmulator_WriteObject(LATTICE_POWER_TRACKING_PID_PARAMS_EEID,
                                    sizeof(Pid_Params_t),
                                    &PowerTrackingPidParams);
-
-        return TRUE;
-    }
-    else
-    {
-        return FALSE;
-    }
-}
-
-/***
- * @brief Gets power tracking PID coefficients.
- * 
- * @param kp: Pointer to return the proportional value.
- * @param ki: Pointer to return the integral operator coefficient.
- * @param kd: Pointer to return the derivative operator coefficient.
- * @param tf: Pointer to return the input filter time constant.
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf)
-{
-    if (Flags.powerTrackingPidParams)
-    {
-        *kp = PowerTrackingPidParams.kp;
-        *ki = PowerTrackingPidParams.ki;
-        *kd = PowerTrackingPidParams.kd;
-        *tf = PowerTrackingPidParams.tfilt;
 
         return TRUE;
     }
@@ -618,7 +599,7 @@ Bool_t Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float 
  */
 Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float tf)
 {
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
+    if (Status != LATTICE_STATUS_CONFIG)
     {
         return FALSE;
     }
@@ -629,8 +610,6 @@ Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float
         FrequencyTrackingPidParams.ki = ki;
         FrequencyTrackingPidParams.kd = kd;
         FrequencyTrackingPidParams.tfilt = tf;
-
-        Flags.frequencyTrackingPidParams = TRUE;
 
         EepromEmulator_WriteObject(LATTICE_FREQUENCY_TRACKING_PID_PARAMS_EEID,
                                    sizeof(Pid_Params_t),
@@ -645,91 +624,6 @@ Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float
 }
 
 /***
- * @brief Gets frequency tracking PID coefficients.
- * 
- * @param kp: Pointer to return proportional value.
- * @param ki: Pointer to return integral operator's coefficient.
- * @param kd: Pointer to return derivative operator's coefficient.
- * @param tf: Pointer to return input filter's time constant.
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_GetFrequencyTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf)
-{
-    if (Flags.frequencyTrackingPidParams)
-    {
-        *kp = FrequencyTrackingPidParams.kp;
-        *ki = FrequencyTrackingPidParams.ki;
-        *kd = FrequencyTrackingPidParams.kd;
-        *tf = FrequencyTrackingPidParams.tfilt;
-
-        return TRUE;
-    }
-    else
-    {
-        return FALSE;
-    }
-}
-
-/***
- * @brief Puts the device into the factory mode.
- * 
- * @param password: Password generated by the hash function with device 
- * information.
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_FactoryMode(int32_t password)
-{
-    // If device info is not set; the device is already authorized.
-    if (!Flags.deviceInfo)
-    {
-        return TRUE;
-    }
-
-    // Check password.
-    if (password != hash(DeviceInfo.deviceId, DeviceInfo.versionMajor,
-                         DeviceInfo.versionMinor))
-    {
-        return FALSE;
-    }
-
-    // If not in factory mode, trigger event.
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
-    {
-        Events |= EVENT_FACTORY_MODE;
-    }
-
-    return TRUE;
-}
-
-/***
- * @brief Invokes calibration procedure.
- * 
- * @retval Operation result: either TRUE or FALSE.
- */
-Bool_t Lattice_Calibrate(void)
-{
-    if (Status != LATTICE_STATUS_FACTORY_CONFIG)
-    {
-        return FALSE;
-    }
-
-    Events |= EVENT_CALIBRATE;
-
-    return TRUE;
-}
-
-/***
- * @brief Soft resets the system.
- */
-void Lattice_Reset(void)
-{
-    // Reset the system.
-    HAL_NVIC_SystemReset();
-}
-
-/***
  * @brief Sets the destination power(used in tracking mode).
  * 
  * @param destinationPower: Destination power.
@@ -738,9 +632,7 @@ void Lattice_Reset(void)
  */
 Bool_t Lattice_SetDestinationPower(float destinationPower)
 {
-    if (!((Status == LATTICE_STATUS_FACTORY_CONFIG) ||
-          (Status == LATTICE_STATUS_OPERATING_SEARCHING) ||
-          (Status == LATTICE_STATUS_OPERATING_TRACKING)))
+    if (Status != LATTICE_STATUS_CONFIG)
     {
         return FALSE;
     }
@@ -748,20 +640,10 @@ Bool_t Lattice_SetDestinationPower(float destinationPower)
     if (0.0f < destinationPower)
     {
         TrackingDestinationPower = destinationPower;
-        Flags.trackingDestinationPower = TRUE;
 
-        // If the device is at factory mode, there aren't any
-        //problem of writing to the eeprom emulator.
-        if (Status == LATTICE_STATUS_FACTORY_CONFIG)
-        {
-            EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
-                                       sizeof(TrackingDestinationPower),
-                                       &TrackingDestinationPower);
-        }
-        else
-        {
-            Events |= EVENT_DESTINATION_POWER_SET;
-        }
+        EepromEmulator_WriteObject(LATTICE_TRACKING_DESTINATION_POWER_EEID,
+                                   sizeof(TrackingDestinationPower),
+                                   &TrackingDestinationPower);
 
         return TRUE;
     }
@@ -774,41 +656,142 @@ Bool_t Lattice_SetDestinationPower(float destinationPower)
 }
 
 /***
- * @brief Gets the destination power(used in tracking mode).
- * 
- * @param destinationPower: Pointer to return destination power.
- * 
- * @retval Operation result: either TRUE or FALSE.
+ * @brief Gets calibration polynomial. 
+ *
+ * @param a0: Pointer to real part zeroth order term coefficient.
+ * @param a1: Pointer to real part first order term coefficient.
+ * @param a2: Pointer to real part second order term coefficient.
+ * @param b0: Pointer to imaginary part zeroth order term coefficient.
+ * @param b1: Pointer to imaginary part first order term coefficient.
+ * @param b2: Pointer to imaginary part second order term coefficient.
+ *
+ * @retval Operation result(TRUE or FALSE).
  */
-Bool_t Lattice_GetDestinationPower(float *destinationPower)
+void Lattice_GetCalibrationPolynomial(float *a0, float *a1, float *a2, float *b0, float *b1,
+                                      float *b2)
 {
-    if (Flags.trackingDestinationPower)
-    {
-        *destinationPower = TrackingDestinationPower;
-        return TRUE;
-    }
-
-    return FALSE;
+    *a0 = Calibration.calibrationPoly[0].real;
+    *b0 = Calibration.calibrationPoly[0].img;
+    *a1 = Calibration.calibrationPoly[1].real;
+    *b1 = Calibration.calibrationPoly[1].img;
+    *a2 = Calibration.calibrationPoly[2].real;
+    *b2 = Calibration.calibrationPoly[2].img;
 }
 
 /***
- * @brief Turns on or off the reporting. Reporting reports the tracking 
- * information.
+ * @brief Gets constraint variables.
  * 
- * @param isOn: TRUE if tracking is on, vice versa.
- * 
- * @retval Operation result: either TRUE or FALSE.
+ * @param maxPower: Pointer to return maximum power.
+ * @param minFrequency: Pointer to return minimum frequency.
+ * @param maxFrequency: Pointer to return maximum frequency.
  */
-Bool_t Lattice_Report(Bool_t isOn)
+void Lattice_GetConstraints(float *maxPower, float *minFrequency, float *maxFrequency)
 {
-    if ((Status != LATTICE_STATUS_OPERATING_SEARCHING) &&
-        (Status != LATTICE_STATUS_OPERATING_TRACKING))
-    {
-        return FALSE;
-    }
+    *maxPower = Constraints.maxPower;
+    *minFrequency = Constraints.minFrequency;
+    *maxFrequency = Constraints.maxFrequency;
+}
 
-    ReportingEnabled = isOn;
-    return TRUE;
+/***
+ * @brief Gets searching parameters.
+ * 
+ * @param normalizedPower: Pointer to return the normalized searching power.
+ * @param steps: Point to return the number of steps.
+ */
+void Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps)
+{
+    *normalizedPower = SearchingParams.normalizedPower;
+    *steps = SearchingParams.steps;
+}
+
+/***
+ * @brief Gets error detection parameters.
+ * 
+ * @param minHornImpedance: Pointer to return minimum horn impedance.
+ * @param maxHornImpedance: Pointer to return maximum horn impedance.
+ * @param powerTrackingTolerance: Pointer to return power tracking tolerance.
+ * @param frequencyTrackingTolerance: Pointer to return frequency tracking tolerance.
+ * @param monitoringPeriod: Pointer to return monitoring period value.
+ * @param timeout: Pointer to return timeout value.
+ */
+void Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
+                                     float *powerTrackingTolerance, float *frequencyTrackingTolerance,
+                                     float *monitoringPeriod, float *timeout)
+{
+    *minHornImpedance = ErrorDetectionParams.minHornImpedance;
+    *maxHornImpedance = ErrorDetectionParams.maxHornImpedance;
+    *powerTrackingTolerance = ErrorDetectionParams.powerTrackingTolerance;
+    *frequencyTrackingTolerance = ErrorDetectionParams.frequencyTrackingTolerance;
+    *monitoringPeriod = ErrorDetectionParams.monitoringPeriod;
+    *timeout = ErrorDetectionParams.timeout;
+}
+
+/***
+ * @brief Gets power tracking PID coefficients.
+ * 
+ * @param kp: Pointer to return the proportional value.
+ * @param ki: Pointer to return the integral operator coefficient.
+ * @param kd: Pointer to return the derivative operator coefficient.
+ * @param tf: Pointer to return the input filter time constant.
+ */
+void Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf)
+{
+    *kp = PowerTrackingPidParams.kp;
+    *ki = PowerTrackingPidParams.ki;
+    *kd = PowerTrackingPidParams.kd;
+    *tf = PowerTrackingPidParams.tfilt;
+}
+
+/***
+ * @brief Gets frequency tracking PID coefficients.
+ * 
+ * @param kp: Pointer to return proportional value.
+ * @param ki: Pointer to return integral operator's coefficient.
+ * @param kd: Pointer to return derivative operator's coefficient.
+ * @param tf: Pointer to return input filter's time constant.
+ */
+void Lattice_GetFrequencyTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf)
+{
+    *kp = FrequencyTrackingPidParams.kp;
+    *ki = FrequencyTrackingPidParams.ki;
+    *kd = FrequencyTrackingPidParams.kd;
+    *tf = FrequencyTrackingPidParams.tfilt;
+}
+
+/***
+ * @brief Gets the destination power(used in tracking mode).
+ * 
+ * @param destinationPower: Pointer to return destination power.
+ */
+void Lattice_GetDestinationPower(float *destinationPower)
+{
+    *destinationPower = TrackingDestinationPower;
+}
+
+/***
+ * @brief Gets monitoring variables.
+ * 
+ * @param status: Pointer to return status of the device.
+ * @param triggered: Pointer to return trigger state of the device.
+ * @param frequency: Pointer to return output frequency.
+ * @param duty: Pointer to return output duty.
+ * @param powerReal: Pointer to return power phasor real component.
+ * @param powerImg: Pointer to return power phasor imaginary component.
+ * @param impReal: Pointer to return impendace phasor real component.
+ * @param impImg: Pointer to return impedance phasor imaginary component.
+ */
+void Lattice_GetReport(Lattice_Status_t *status, Bool_t *triggered, float *frequency, float *duty,
+                       float *powerReal, float *powerImg, float *impReal, float *impImg)
+{
+    Complex_t power;
+    Complex_t impedance;
+
+    *status = Status;
+    Core_GetMonitoringParams(triggered, frequency, duty, &power, &impedance);
+    *powerReal = power.real;
+    *powerImg = power.img;
+    *impReal = impedance.real;
+    *impImg = impedance.img;
 }
 
 /***
@@ -845,23 +828,6 @@ void startTracking(void)
     HornImpedanceOutofWindowsSuccessiveErrors = 0;
     PowerTrackingSuccessiveErrors = 0;
     FrequencyTrackingSuccessiveErrors = 0;
-}
-
-/***
- * @brief Generated signed integer by using device info parameters.
- * 
- * @param deviceId: Id of the device.
- * @param versionMajor: Firmware version(major).
- * @param versionMinor: Firmware version(minor).
- * 
- * @retval Some signed integer.
- */
-int32_t hash(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor)
-{
-    uint64_t tmp;
-    tmp = ((uint64_t)deviceId << 32) | (versionMajor << 16) | versionMinor;
-
-    return ((tmp + LATTICE_HASH_OFFSET) % LATTICE_HASH_DIVISOR);
 }
 
 /***
@@ -903,51 +869,6 @@ void calculateCalibrationPolynomials(float *scanImpReal, float *scanImpImg,
         coeffs[i].real = coeffs_real[i];
         coeffs[i].img = coeffs_img[i];
     }
-}
-
-/* Exported callbacks ------------------------------------------------------*/
-/***
- * @brief Gets triggered when horn impedance is not between limits for 
- * <timeout> seconds.
- * 
- * @param hornImpedance: Impedance of the horn.
- */
-__weak void Lattice_HornImpedanceOutofWindowCallback(float hornImpedance)
-{
-}
-
-/***
- * @brief Gets triggered when frequency is not between limits for 
- * <timeout> seconds.
- * 
- * @param trackingMeasure: Tracking measure value.
- */
-__weak void Lattice_FrequencyTrackingFailureCallback(float trackingMeasure)
-{
-}
-
-/***
- * @brief Gets triggered when power is not between limits for 
- * <timeout> seconds.
- * 
- * @param power: Power transmitted to the horn.
- */
-__weak void Lattice_PowerTrackingFailureCallback(float power)
-{
-}
-
-/***
- * @brief Gets triggered at every monitoring event if reporting flag is
- * set. 
- * @param triggered: If the device is triggered(power output enabled) or not.
- * @param frequency: Current drive frequency.
- * @param duty: Current driver duty.
- * @param power: Complex power transmitted to the horn.
- * @param impedance: Complex impedance of the horn.
- */
-__weak void Lattice_ReportingCallback(Bool_t triggered, float frequency, float duty,
-                                      Complex_t *power, Complex_t *impedance)
-{
 }
 
 /* Imported callbacks ------------------------------------------------------*/
@@ -1040,31 +961,19 @@ void Core_MonitoringCallback(Bool_t triggered, float frequency, float duty,
         // Check if any type of error counter has exceeded the maximum number of errors.
         if (HornImpedanceOutofWindowsSuccessiveErrors > max_successive_errors)
         {
-            Lattice_HornImpedanceOutofWindowCallback(horn_imp);
-
             Error = LATTICE_ERROR_HORN_IMPEDANCE_OUT_OF_WINDOW;
             Events |= EVENT_ERROR_OCCURRED;
         }
         else if (FrequencyTrackingSuccessiveErrors > max_successive_errors)
         {
-            Lattice_FrequencyTrackingFailureCallback(tracking_measure);
-
             Error = LATTICE_ERROR_FREQUENCY_TRACKING_FAILURE;
             Events |= EVENT_ERROR_OCCURRED;
         }
         else if (PowerTrackingSuccessiveErrors > max_successive_errors)
         {
-            Lattice_PowerTrackingFailureCallback(power->real);
-
             Error = LATTICE_ERROR_POWER_TRACKING_FAILURE;
             Events |= EVENT_ERROR_OCCURRED;
         }
-    }
-
-    // If reporting is enabled and error didn't occur send report message.
-    if (ReportingEnabled && (Error == LATTICE_ERROR_NONE))
-    {
-        Lattice_ReportingCallback(triggered, frequency, duty, power, impedance);
     }
 }
 

@@ -2,7 +2,8 @@ import unittest
 import parser
 from parser import ParamType
 
-
+class TimerTest(unittest.TestCase):
+	
 class TestStringMethods(unittest.TestCase):
     def setUp(self):
         self.tried = False
@@ -38,7 +39,6 @@ class TestStringMethods(unittest.TestCase):
         self.assertTrue(self.succeeded)
         self.assertAlmostEqual(50.0, self.params_parsing_result['a'])
         print(self.params_parsing_result)
-
 
 if __name__ == '__main__':
     unittest.main()

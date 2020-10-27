@@ -71,10 +71,10 @@ static volatile Core_Status_t Status = CORE_STATUS_READY;
 static volatile uint16_t Events;
 
 // Factory data.
-static float ConstraintMinFrequency;
-static float ConstraintMaxFrequency;
-static float ConstraintMinNormPower;
-static float ConstraintMaxNormPower;
+static float TrackingMinFrequency;
+static float TrackingMaxFrequency;
+static float TrackingMinNormPower;
+static float TrackingMaxNormPower;
 static Complex_t CalPoly[CALIBRATION_POLY_DEGREE + 1];
 static Bool_t Calibrated;
 
@@ -93,11 +93,11 @@ static float MonitoringStopwatch;
 static Complex_t MonitoringPower;
 static Complex_t MonitoringImpedance;
 static float MonitoringFrequency;
-static float MonitoringLoading;
+static float MonitoringDuty;
 static Complex_t MonitoringPowerShadow;
 static Complex_t MonitoringImpedanceShadow;
 static float MonitoringFrequencyShadow;
-static float MonitoringLoadingShadow;
+static float MonitoringDutyShadow;
 static Bool_t MonitoringTriggeredShadow;
 
 // Control variables used in searching mode.
@@ -129,13 +129,13 @@ static uint16_t AdcBuffer[ADC_DOUBLE_BUFFER_ELEMENT_COUNT];
  * 
  * @param calibrationCoeffs: NULL if no calibation is present. Includes some second
  * order polynomial coefficients if not NULL.
- * @param minFrequency: Frequency range minimum value.
- * @param maxFrequency: Frequency range maximum value.
- * @param minNormPower: Minimum normalized power.
- * @param maxNormPower: Maximum normalized power.
+ * @param trackingMinFrequency: Tracking frequency range minimum value.
+ * @param trackingMaxFrequency: Tracking frequency range maximum value.
+ * @param trackingMinNormPower: Tracking minimum normalized power.
+ * @param trackingMaxNormPower: Tracking maximum normalized power.
  */
-void Core_Init(Complex_t *calibrationCoeffs, float minFrequency, float maxFrequency,
-               float minNormPower, float maxNormPower)
+void Core_Init(Complex_t *calibrationCoeffs, float trackingMinFrequency,
+               float trackingMaxFrequency, float trackingMinNormPower, float trackingMaxNormPower)
 {
     if (Status != CORE_STATUS_UNINIT)
     {
@@ -143,10 +143,10 @@ void Core_Init(Complex_t *calibrationCoeffs, float minFrequency, float maxFreque
     }
 
     // Set constraints of the device.
-    ConstraintMinFrequency = minFrequency;
-    ConstraintMaxFrequency = maxFrequency;
-    ConstraintMinNormPower = minNormPower;
-    ConstraintMaxNormPower = maxNormPower;
+    TrackingMinFrequency = trackingMinFrequency;
+    TrackingMaxFrequency = trackingMaxFrequency;
+    TrackingMinNormPower = trackingMinNormPower;
+    TrackingMaxNormPower = trackingMaxNormPower;
 
     // Not-triggered initially.
     TrackingTriggeredPreload = FALSE;
@@ -270,12 +270,12 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     }
 
     // Setup tracking PIDs.
-    Pid_Setup(&TrackingPowerPid, powerTrackingPidParams, ConstraintMinNormPower,
-              ConstraintMaxNormPower);
+    Pid_Setup(&TrackingPowerPid, powerTrackingPidParams, TrackingMinNormPower,
+              TrackingMaxNormPower);
 
     Pid_Setup(&TrackingFrequencyPid, frequencyTrackingPidParams,
-              (ConstraintMinFrequency - anchorFrequency),
-              (ConstraintMaxFrequency - anchorFrequency));
+              (TrackingMinFrequency - anchorFrequency),
+              (TrackingMaxFrequency - anchorFrequency));
 
     // Set control variables.
     TrackingAnchorFrequency = anchorFrequency;
@@ -289,11 +289,11 @@ void Core_Track(Pid_Params_t *powerTrackingPidParams,
     Complex_Set(&MonitoringPower, destinationPower, 0.0f);
     Complex_Set(&MonitoringImpedance, 0.0f, 0.0f);
     MonitoringFrequency = anchorFrequency;
-    MonitoringLoading = destinationPower / fullPower;
+    MonitoringDuty = getDuty(TrackingMinNormPower);
     MonitoringStopwatch = 0.0f;
 
     // Update timers.
-    updateClockCircuitry(anchorFrequency, getDuty(ConstraintMinNormPower));
+    updateClockCircuitry(anchorFrequency, getDuty(TrackingMinNormPower));
 
     // Start the engine. This will enable ADC operation and ISRs.
     engineStart();
@@ -341,8 +341,9 @@ void Core_Execute(void)
     // Handle monitoring event.
     if ((Events & EVENT_MONITORING_UPDATE) != 0)
     {
-        Core_MonitoringCallback(MonitoringTriggeredShadow, MonitoringFrequencyShadow, MonitoringLoadingShadow,
-                                &MonitoringPowerShadow, &MonitoringImpedanceShadow);
+        Core_MonitoringCallback(MonitoringTriggeredShadow, MonitoringFrequencyShadow,
+                                MonitoringDutyShadow, &MonitoringPowerShadow,
+                                &MonitoringImpedanceShadow);
 
         Events ^= EVENT_MONITORING_UPDATE;
     }
@@ -373,6 +374,27 @@ void Core_Stop(void)
 void Core_TriggerStatusUpdate(Bool_t triggered)
 {
     TrackingTriggeredPreload = triggered;
+}
+
+/***
+ * @brief Gets monitoring variables.
+ * 
+ * @param triggered: Pointer to return trigger state of the device.
+ * @param frequency: Pointer to return output frequency.
+ * @param duty: Pointer to return output duty.
+ * @param power: Pointer to return power phasor.
+ * @param impedance: Pointer to return impedance phasor.
+ */
+void Core_GetMonitoringParams(Bool_t *triggered, float *frequency, float *duty,
+                              Complex_t *power, Complex_t *impedance)
+{
+    *triggered = MonitoringTriggeredShadow;
+    *frequency = MonitoringFrequencyShadow;
+    *duty = MonitoringDutyShadow;
+    power->real = MonitoringPowerShadow.real;
+    power->img = MonitoringPowerShadow.img;
+    impedance->real = MonitoringImpedanceShadow.real;
+    impedance->img = MonitoringImpedanceShadow.img;
 }
 
 /***
@@ -527,6 +549,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
     Complex_t impedance;
     Complex_t conj_current;
     float deltat;
+    float __duty;
 
     // Calculate four quadrant power.
     Complex_Conjugate(current, &conj_current);
@@ -546,8 +569,8 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
 
         // Get duty.
         duty = getDuty(Pid_Exe(&TrackingPowerPid,
-                              ((TrackingDestinationPower - power.real) / TrackingFullPower),
-                              deltat));
+                               ((TrackingDestinationPower - power.real) / TrackingFullPower),
+                               deltat));
 
         // Calculate tracking measure.
         float tracking_measure;
@@ -558,15 +581,18 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
                             clamp((tracking_measure), -1.0f, 1.0f), deltat) +
                     TrackingAnchorFrequency;
 
+        __duty = duty;
         updateClockCircuitry(frequency, duty);
     }
     else if (TrackingTriggeredPreload)
     {
+        __duty = PwmDuty;
         updateClockCircuitry(PwmFrequency, PwmDuty);
     }
     else
     {
-        updateClockCircuitry(PwmFrequency, getDuty(ConstraintMinNormPower));
+        __duty = getDuty(TrackingMinNormPower);
+        updateClockCircuitry(PwmFrequency, getDuty(TrackingMinNormPower));
     }
 
     // Update monitoring values.
@@ -576,7 +602,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
     emaComplex(&MonitoringPower, &power, cfilt);
     emaComplex(&MonitoringImpedance, &impedance, cfilt);
     ema(&MonitoringFrequency, PwmFrequency, cfilt);
-    ema(&MonitoringLoading, (power.real / TrackingFullPower), cfilt);
+    ema(&MonitoringDuty, __duty, cfilt);
 
     MonitoringStopwatch += deltat;
 
@@ -589,7 +615,7 @@ inline void tracker(Complex_t *voltage, Complex_t *current)
         Complex_Copy(&MonitoringPower, &MonitoringPowerShadow);
         Complex_Copy(&MonitoringImpedance, &MonitoringImpedanceShadow);
         MonitoringFrequencyShadow = MonitoringFrequency;
-        MonitoringLoadingShadow = MonitoringLoading;
+        MonitoringDutyShadow = MonitoringDuty;
         MonitoringTriggeredShadow = TrackingTriggered;
 
         // Set monitoring update event.
@@ -786,7 +812,7 @@ __weak void Core_MonitoringCallback(Bool_t triggered, float frequency, float dut
 }
 
 /* Utilities ---------------------------------------------------------------*/
-/****
+/***
  * @brief Converts the given normalized power to the duty required to
  * generate it(for the main harmonic).
  * 

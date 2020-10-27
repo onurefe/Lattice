@@ -37,12 +37,6 @@ typedef struct
 } Page_t;
 
 /* Private constants ---------------------------------------------------------*/
-
-#if !defined(FLASH_VOLTAGE_RANGE_1) && !defined(FLASH_VOLTAGE_RANGE_2) && \
-    !defined(FLASH_VOLTAGE_RANGE_3) && !defined(FLASH_VOLTAGE_RANGE_4)
-#define FLASH_VOLTAGE_RANGE_3
-#endif
-
 #define PAGE_SIZE 0x00000800UL /* Page size = 2KByte */
 #define PAGE_HEADER_SIZE 0x02
 #define ENTRY_STACK_SIZE (0x00000100UL - 0x00000008UL) /* Entry stack size = 256byte-8Bytes */

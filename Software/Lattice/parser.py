@@ -14,7 +14,7 @@ class Parser:
 
     def feed_line(self, line):
         line_fields = line.split(' ')
-
+		
         # If trigger not found, return error message.
         if line_fields[0] not in self.triggers:
             print("Trigger " + line_fields[0] + " not found")

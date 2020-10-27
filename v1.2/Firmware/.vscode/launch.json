@@ -10,7 +10,7 @@
             "executable": "build/Firmware.elf",
             "svdFile": ".vscode/STM32F334x.svd",
             "configFiles": [
-                "/home/onur/STM32Toolchain/openocd/0.10.0-201704182147-dev/scripts/interface/stlink-v2.cfg",
+                "/home/onur/STM32Toolchain/xpack-openocd-0.10.0-14/scripts/interface/stlink.cfg",
                 ".vscode/stm32f3x.cfg"
             ],
             "preLaunchTask": "Build project"

@@ -8,10 +8,10 @@
 /* Exported types ----------------------------------------------------------*/
 enum
 {
-    LATTICE_STATUS_FACTORY_CONFIG = 0,
-    LATTICE_STATUS_FACTORY_CONFIG_CALIBRATING,
-    LATTICE_STATUS_OPERATING_SEARCHING,
-    LATTICE_STATUS_OPERATING_TRACKING,
+    LATTICE_STATUS_CONFIG = 0,
+    LATTICE_STATUS_CALIBRATING,
+    LATTICE_STATUS_SEARCHING,
+    LATTICE_STATUS_TRACKING,
     LATTICE_STATUS_ERROR
 };
 typedef uint8_t Lattice_Status_t;
@@ -26,46 +26,40 @@ enum
 typedef uint8_t Lattice_Error_t;
 
 /* Exported functions ------------------------------------------------------*/
-// Functions to manipulate factory data.
-Bool_t Lattice_SetConstraints(float maxPower, float minLoading, float maxLoading);
-Bool_t Lattice_GetConstraints(float *maxPower, float *minLoading, float *maxLoading);
-Bool_t Lattice_SetDeviceInfo(uint32_t deviceId, uint16_t versionMajor, uint16_t versionMinor);
-Bool_t Lattice_GetDeviceInfo(uint32_t *deviceId, uint16_t *versionMajor, uint16_t *versionMinor);
+// Cli control functions.
+Bool_t Lattice_ConfigMode(int32_t password);
+Bool_t Lattice_LoadDefaults(void);
+void Lattice_Reset(void);
+Lattice_Status_t Lattice_GetStatus(void);
+Lattice_Error_t Lattice_GetError(void);
+Bool_t Lattice_Calibrate(void);
+void Lattice_GetReport(Lattice_Status_t *status, Bool_t *triggerStatus, float *frequency,
+                         float *duty, float *powerReal, float *powerImg, float *impedanceReal,
+                         float *impendaceImg);
+Bool_t Lattice_SetCalibrationPolynomial(float a0, float a1, float a2, float b0, float b1,
+                                        float b2);
+Bool_t Lattice_SetConstraints(float maxPower, float minFrequency, float maxFrequency);
 Bool_t Lattice_SetSearchingParams(float normalizedPower, uint16_t steps);
-Bool_t Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps);
 Bool_t Lattice_SetErrorDetectionParams(float minHornImpedance, float maxHornImpedance,
                                        float powerTrackingTolerance, float frequencyTrackingTolerance,
                                        float monitoringPeriod, float timeout);
-Bool_t Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
-                                       float *powerTrackingTolerance, float *frequencyTrackingTolerance,
-                                       float *monitoringPeriod, float *timeout);
-Bool_t Lattice_SetMonitoringPeriod(float period);
-Bool_t Lattice_GetMonitoringPeriod(float *period);
 Bool_t Lattice_SetPowerTrackingPidCoeffs(float kp, float ki, float kd, float tf);
-Bool_t Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf);
 Bool_t Lattice_SetFrequencyTrackingPidCoeffs(float kp, float ki, float kd, float tf);
-Bool_t Lattice_GetFrequencyTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf);
-
-// Cli control functions.
-Bool_t Lattice_FactoryMode(int32_t password);
-Bool_t Lattice_Calibrate(void);
-void Lattice_Reset(void);
-Bool_t Lattice_SetDestinationPower(float destionationPower);
-Bool_t Lattice_GetDestinationPower(float *destionationPower);
-Bool_t Lattice_Report(Bool_t isOn);
-Lattice_Status_t Lattice_GetStatus(void);
-Lattice_Error_t Lattice_GetError(void);
+Bool_t Lattice_SetDestinationPower(float destinationPower);
+void Lattice_GetCalibrationPolynomial(float *a0, float *a1, float *a2, float *b0, float *b1,
+                                      float *b2);
+void Lattice_GetConstraints(float *maxPower, float *minFrequency, float *maxFrequency);
+void Lattice_GetSearchingParams(float *normalizedPower, uint16_t *steps);
+void Lattice_GetErrorDetectionParams(float *minHornImpedance, float *maxHornImpedance,
+                                     float *powerTrackingTolerance, float *frequencyTrackingTolerance,
+                                     float *monitoringPeriod, float *timeout);
+void Lattice_GetFrequencyTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf);
+void Lattice_GetPowerTrackingPidCoeffs(float *kp, float *ki, float *kd, float *tf);
+void Lattice_GetDestinationPower(float *destinationPower);
 
 // Module control functions.
 void Lattice_Start(void);
 void Lattice_Execute(void);
 void Lattice_Stop(void);
-
-/* Exported callbacks-------------------------------------------------------*/
-void Lattice_HornImpedanceOutofWindowCallback(float hornImpedance);
-void Lattice_FrequencyTrackingFailureCallback(float trackingMeasure);
-void Lattice_PowerTrackingFailureCallback(float power);
-void Lattice_ReportingCallback(Bool_t triggered, float frequency, float duty,
-                               Complex_t *power, Complex_t *impedance);
 
 #endif

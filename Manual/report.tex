@@ -1,0 +1,306 @@
+\documentclass{article}
+
+\usepackage{graphicx} % Required for the inclusion of images
+\usepackage{natbib} % Required to change bibliography style to APA
+\usepackage{amsmath} % Required for some math elements 
+\usepackage{subfig}
+
+\setlength\parindent{0pt} % Removes all indentation from paragraphs
+
+\renewcommand{\labelenumii}{\Roman{enumii}}
+%\usepackage{times} % Uncomment to use the Times New Roman font
+
+%----------------------------------------------------------------------------------------
+%	DOCUMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{Lattice Manual v1.0} % Title
+\author{Onur Efe}
+\date{\today} % Date for the report
+
+\begin{document}
+
+\maketitle % Insert the title, author and date
+
+\section{Setup}
+Device is pretty easy to make operational since no configuration is needed generally. 
+Only necessary electrical connections should be made. These are;
+
+\begin{itemize}
+      \item 120-240VAC Power connection.
+      \item Trigger connection.
+      \item Ultrasonic transducer connection.
+\end{itemize}
+
+However user can also interact with the device. All the interaction is composed of command-response
+transactions. Commands should be sent by the user over the serial communication protocol.
+Simply a hyper-terminal program can be used for this purpose. Serial 
+communication settings should be 9600 8N1. Available commands, their format and functions are
+given in the following pages. It's also benefical to express that every command can not be executed
+in every state. Device state should be convenient to execute a command. 
+
+\section{Device states}
+Device is one of the following states on it's operation. On start-up; device is put to the Searching
+mode. After searching is completed, it switches to the Tracking mode automatically. This is also the 
+operational state. If any error occur during the operation; device switches itself to the Error mode.
+At this point, output power is disabled and error can be determined by sending \"{}gerror\"{} command.    
+After the error has been fixed; device should be reset in order to restart it's operation.
+
+If one require to change the configuration of the device; he should put the device into the config mode. 
+\"{} config \"{} command with password \"{} 111995 \"{} is used for this purpose. After the configuration
+process is completed; device should be restarted by send \"{}reset\"{} command in order to run it again.
+
+Device modes are as in the following list;
+\begin{itemize}
+      \item Config
+            \\ Brief: In config modes, device is open for configurations. After the configuration; in order to
+            return to normal operation; reset command should be sent.
+      \item Calibrating
+            \\ Brief: In calibrating mode, device is busy measuring the calibration element's impedance for the operation
+            frequency range. Then it calculates it's measurement frequency response and returns to the config mode.
+      \item Searching
+            \\ Brief: Device searches for a resonance frequency in this mode. This is the frequency which device gives
+            the lowest resonance measure.
+      \item Tracking
+            \\ Brief: Device is operating normally in this mode. And it's tracking both for power and frequency.
+      \item Error
+            \\ Brief: Error has occurred and the device had stopped working. Error code should be checked in order to
+            understand error cause. After fixing, device should be reset.
+\end{itemize}
+
+\section{Commands}
+Following are the list of available commands.
+
+\begin{enumerate}
+      \item devinf
+            \\ Brief: Gets device information.
+            \\ Response: $\langle F|MinOperationFrequency \rangle$ $\langle R|MaxOperationFrequency \rangle$
+            $\langle P|OutputPowerCapacity \rangle$ $\langle N|VersionMinor \rangle$ $\langle J|VersionMajor \rangle$
+            \\ Modes: All. 
+      \item config $\langle P|Password \rangle$
+            \\ Brief: Puts the device into the config mode.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Searching, Tracking
+      \item defaults
+            \\ Brief: Loads default configuration values.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config
+      \item reset
+            \\ Brief: Resets the device.
+            \\ Response: None.
+            \\ Modes: All
+      \item gstatus
+            \\ Brief Gets the device status.
+            \\ Response: $\langle S|Status \rangle$
+            \\ Modes: All
+      \item gerror
+            \\ Brief: Gets the error code.
+            \\ Response: $\langle E|ErrorCode \rangle$
+            \\ Modes: All
+      \item calibrate $\langle R|CalibrationResistance \rangle$
+            \\ Brief: Starts the calibration procedure.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config
+      \item report
+            \\ Brief: Reports the monitoring parameters.
+            \\ Response: $\langle S|Status \rangle$ $\langle T|TriggerStatus\rangle$ $\langle F|Frequency \rangle$ $\langle D|Duty \rangle$
+            $\langle W|PowerReal \rangle$ $\langle Q|PowerImaginary \rangle$ $\langle R|ImpedanceReal \rangle$
+            $\langle I|ImpedanceImaginary \rangle$
+            \\ Modes: Tracking
+      \item calpoly-s $\langle R|a_0 \rangle$ $\langle E|a_1 \rangle$ $\langle A|a_2 \rangle$
+            $\langle I|b_0 \rangle$ $\langle M|b_1 \rangle$ $\langle G|b_2 \rangle$
+            \\ Brief: Sets calibration polynomial.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config
+      \item constr-s $\langle P|MaximumPower \rangle$ $\langle F|MinFrequency \rangle$ $\langle R|MaxFrequency \rangle$
+            \\ Brief: Sets constraints.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config
+      \item srcpms-s $\langle P|NormalizedPower \rangle$  $\langle S|Steps \rangle$
+            \\ Brief: Sets search parameters.  
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config.
+      \item errdet-s $\langle N|MinHornImpedance \rangle$ $\langle X|MaxHornImpedance \rangle$
+            $\langle P|PowerTrackTolerance \rangle$ $\langle F|FreqTrackTolerance \rangle$
+            $\langle O|MonitoringPeriod \rangle$ $\langle T|Timeout \rangle$
+            \\ Brief: Sets error detection parameters. 
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config.
+      \item pwpid-s $\langle P|Kp \rangle$ $\langle I|Ki \rangle$ $\langle D|Kd \rangle$
+            $\langle T|PidInputFilterTc \rangle$
+            \\ Brief: Sets power tracking PID parameters.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config.
+      \item frpid-s $\langle P|Kp \rangle$ $\langle I|Ki \rangle$ $\langle D|Kd \rangle$
+            $\langle T|PidInputFilterTc \rangle$
+            \\ Brief: Sets frequency tracking PID parameters.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config.
+      \item destpow-s $\langle P|DestinationPower \rangle$
+            \\ Brief: Sets destination power.
+            \\ Response: $\langle R|OperationResult \rangle$
+            \\ Modes: Config.
+      \item calpoly-g
+            \\ Brief: Gets calibration polynomials.
+            \\ Response: $\langle R|a_0 \rangle$ $\langle E|a_1 \rangle$ $\langle A|a_2 \rangle$
+            $\langle I|b_0 \rangle$ $\langle M|b_1 \rangle$ $\langle G|b_2 \rangle$
+            \\ Modes: All.
+      \item constr-g
+            \\ Brief: Gets device operation constraints. 
+            \\ Response: $\langle P|MaximumPower \rangle$ $\langle F|MinFrequency \rangle$ $\langle R|MaxFrequency \rangle$
+            \\ Modes: All.
+      \item srcpms-g
+            \\ Brief: Gets searching parameters.
+            \\ Response: $\langle P|NormalizedPower \rangle$  $\langle S|Steps \rangle$
+            \\ Modes: All.
+      \item errdet-g
+            \\ Brief: Gets error detection parameters.        
+            \\ Response: $\langle N|MinHornImpedance \rangle$ $\langle X|MaxHornImpedance \rangle$ \\
+            $\langle P|PowerTrackTolerance \rangle$ $\langle F|FreqTrackTolerance \rangle$
+            $\langle O|MonitoringPeriod \rangle$ $\langle T|Timeout \rangle$
+            \\ Modes: All.
+      \item pwpid-g
+            \\ Brief: Gets power tracking PID parameters.      
+            \\Response: $\langle P|Kp \rangle$ $\langle I|Ki \rangle$ $\langle D|Kd \rangle$
+            $\langle T|PidInputFilterTc \rangle$
+            \\ Modes: All.
+      \item frpid-g
+            \\ Brief: Gets frequency tracking PID parameters.
+            \\Response: $\langle P|Kp \rangle$ $\langle I|Ki \rangle$ $\langle D|Kd \rangle$
+            $\langle T|PidInputFilterTc \rangle$
+            \\ Modes: All.
+      \item destpow-g
+            \\ Brief: Gets destination power.
+            \\ Response: $\langle P|DestinationPower \rangle$
+            \\ Modes: All.
+\end{enumerate}
+
+\newpage
+
+\section{Parameters}
+\begin{enumerate}
+      \item VersionMinor
+            \\ Brief: Firmware version minor value.
+            \\ Values: Integers in $[0, 4294967296]$.
+      \item VersionMajor
+            \\ Brief: Firmware version major value.
+            \\ Values: Integers in $[0, 4294967296]$.
+      \item Password
+            \\ Brief: 32-bit password to enter factory mode.
+            \\ Values: Integers in $[0, 4294967296]$.
+      \item OperationResult
+            \\ Brief: Operation result.
+            \\ Values: Integers in $[0, 1]$. 
+            \begin{itemize}
+                  \item 0: Failure
+                  \item 1: Success
+            \end{itemize}
+      \item Status
+            \\ Brief: Device status.
+            \\ Values: Integers in $[0, 4]$. 
+            \begin{itemize}
+                  \item 0: Config
+                  \item 1: Calibrating
+                  \item 2: Searching
+                  \item 3: Tracking
+                  \item 4: Error
+            \end{itemize}
+      \item ErrorCode
+            \\ Brief: Error code.
+            \\ Values: Integers in $[0, 3]$.
+            \begin{itemize}
+                  \item 0: None.
+                  \item 1: Power tracking failure.
+                  \item 2: Frequency tracking failure.
+                  \item 3: Horn impedance out of window.
+            \end{itemize}
+      \item CalibrationResistance
+            \\ Brief: Resistance element which is connected to the output while calibrating.
+            \\ Values: Positive real numbers.
+      \item NormalizedPower
+            \\ Brief: Power given in units of maximum power device can deliver.
+            \\ Values: Real in $[0, 1]$.
+      \item Steps
+            \\ Brief: Controls searching resolution. Increasing the steps will increase 
+            resonance maxima finding time.
+            \\ Values: Integers in $[0, 8192]$.
+      \item TriggerStatus
+            \\ Brief: Output power trigger status.
+            \\ Values: Integers in $[0, 1]$.
+            \begin{itemize}
+                  \item 0: Not triggered
+                  \item 1: Triggered
+            \end{itemize}
+      \item MinHornImpedance
+            \\ Brief: Minimum acceptable horn impedance.
+            \\ Values: Real in $[0, MaxHornImpedance]$.
+      \item MaxHornImpedance
+            \\ Brief: Maximum acceptable horn impedance.
+            \\ Values: Real in $[MinHornImpedance, \inf]$.
+      \item PowerTrackTolerance
+            \\ Brief: Maximum acceptable output power error. 
+            \\ Values: Positive real numbers.
+      \item FrequencyTrackTolerance
+            \\ Brief: Maximum acceptable tracking measure error.
+            \\ Values: Positive real numbers.
+      \item MonitoringPeriod
+            \\ Brief: Error detection check interval. 
+            \\ Values: Real numbers in $[0.1, \inf]$.
+      \item Timeout
+            \\ Brief: Error detection time window. In order to error to be detectable;
+            it should be persistent for at least timeout value.
+            \\ Values: Real numbers in $[0.1, \inf]$.
+      \item Frequency
+            \\ Brief: Output drive frequency.
+            \\ Values: Real numbers in [MinFrequency, MaxFrequency].
+      \item Duty
+            \\ Brief: Output drive duty.
+            \\ Values: Real numbers in [0, 1].
+      \item PowerReal
+            \\ Brief: Output power real component.
+            \\ Values: Real numbers.
+      \item PowerImaginary
+            \\ Brief: Output power imaginary component.
+            \\ Values: Real numbers.
+      \item ImpedanceReal
+            \\ Brief: Horn impedance real component.
+            \\ Values: Real numbers.
+      \item ImpedanceImaginary
+            \\ Brief: Horn impedance imaginary component.
+            \\ Values: Real numbers.
+      \item Kp
+            \\ Brief: PID controller proportionality coefficieint.
+            \\ Values: Positive Real numbers.
+      \item Ki
+            \\ Brief: PID controller integral coefficient.
+            \\ Values: Positive real numbers.
+      \item Kd
+            \\ Brief: PID controller derivative coefficcient.
+            \\ Values: Positive real numbers.
+      \item PidInputFilterTc
+            \\ Brief: PID controller first order input filter time constant in seconds.
+            \\ Values: Positive real numbers.
+      \item $a_0$, $a_1$, $a_2$
+            \\ Brief: Calibration polynomial real part coefficients. Polynomial is in the form 
+            $P_r(f) = a_2 (f/1e4)^2 + a_1 (f/1e4)^1 + a_0$
+            \\ Values: Real numbers.
+      \item $b_0$, $b_1$, $b_2$
+            \\ Brief: Calibration polynomial imaginary part coefficients. Polynomial is in the form 
+            $P_i(f) = b_2 (f/1e4)^2 + b_1 (f/1e4)^1 + b_0$
+            \\ Values: Real numbers.
+      \item MaximumPower
+            \\ Brief: Maximum power that can be delivered to horn.
+            \\ Values: Positive real numbers.
+      \item DestinationPower
+            \\ Brief: Power tracking reference value.
+            \\ Values: Real numbers in $[0, MaximumPower]$.
+      \item MinFrequency
+            \\ Brief: Minimum operation frequency.
+            \\ Values: Real numbers in $[0, MaxFrequency)$.
+      \item MaxFrequency
+            \\ Brief: Maximum operation frequency.
+            \\ Values: Real numbers in $(MinFrequency, \inf]$.
+\end{enumerate}
+%----------------------------------------------------------------------------------------
+
+\end{document}
