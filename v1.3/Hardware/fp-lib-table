@@ -7,4 +7,5 @@
   (lib (name "oe_crystal")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_crystal.pretty")(options "")(descr ""))
   (lib (name "oe_inductor")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_inductor.pretty")(options "")(descr ""))
   (lib (name "oe_diode")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_diode.pretty")(options "")(descr ""))
+  (lib (name "oe_relay")(type "KiCad")(uri "/home/onur/Desktop/GitRepos/oe-kicadlib/Footprints/oe_relay.pretty")(options "")(descr ""))
 )

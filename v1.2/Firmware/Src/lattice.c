@@ -786,8 +786,8 @@ void Lattice_GetReport(Lattice_Status_t *status, Bool_t *triggered, float *frequ
     Complex_t power;
     Complex_t impedance;
 
-    *status = Status;
     Core_GetMonitoringParams(triggered, frequency, duty, &power, &impedance);
+    *status = Status;
     *powerReal = power.real;
     *powerImg = power.img;
     *impReal = impedance.real;
